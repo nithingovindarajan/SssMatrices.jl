@@ -35,6 +35,7 @@ greet()
 
     A = SSS{Float64}(N, n, Gpi, Hpi, Di, Ui, Wi, Vi, Pi, Ri, Qi)
 
+    Adiag = DiagonalSSS{Float64}(N, n, Gpi, Hpi, Di, Ui, Wi, Vi, Pi, Ri, Qi)
 
     # SSS matrix construction from dense matrix
     n = [5, 5, 5, 5, 5, 5, 5, 5]
