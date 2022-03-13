@@ -1,8 +1,13 @@
-# SSS and CSS solvers
+# SSSmatrices
 
-This repository contains Julia code to construct and solve Sequentially Semi Separable (SSS) and Cycle Semi Separable (CSS) matrices. This includes functions to convert a dense matrix into SSS and CSS form. In the case of CSS matrices, an overlapping minimum rank completion problem is solved.
+This repository contains a Julia package to perform algebra with Sequentially Semi Separable (SSS) Matrix representations.
 
-## How to use this code
+## How to install this package
+
+Follow the standard procedure for any Julia package, e.g.
+
+1. Type "]" to enter the package manager.
+2. Type "add https://github.com/nithingovindarajan/SSSmatrices" and press enter 
 
 
 ## Running tests
