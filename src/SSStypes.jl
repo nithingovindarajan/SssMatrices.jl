@@ -1,306 +1,224 @@
-export DiagonalSSS, StrictlyLowerTriangularSSS, SSS
+export SSSFamily, DiagonalSSS, StrictlyLowerTriangularSSS, StrictlyUpperTriangularSSS, LowerTriangularSSS, UpperTriangularSSS, SSS
 
 
-struct DiagonalSSS{Scalar<:Number} <: AbstractMatrix{Scalar}
-    N::Int64
+abstract type SSSFamily{Scalar<:Number} <: AbstractMatrix{Scalar} end
+
+
+struct DiagonalSSS{Scalar<:Number} <: SSSFamily{Scalar}
+
+    # attributes required for construction
+    D::Vector{AbstractMatrix{Scalar}}
+
+    # attributes generated in construction
     n::Vector{Int64}
-    Gpi::Vector{Int64}   # hankel block ranks lower triangular part
-    Hpi::Vector{Int64}   # hankel block rank upper triangular part
-    # main diagonal
-    Di::Vector{Matrix{Scalar}}
-    # upper triangular part
-    Ui::Vector{Matrix{Scalar}}
-    Wi::Vector{Matrix{Scalar}}
-    Vi::Vector{Matrix{Scalar}}
-    # lower triangular part
-    Pi::Vector{Matrix{Scalar}}
-    Ri::Vector{Matrix{Scalar}}
-    Qi::Vector{Matrix{Scalar}}
+    no_blocks::Int64
+    N::Int64
 
-    function DiagonalSSS{Scalar}(N, n, Gpi, Hpi, Di, Ui, Wi, Vi, Pi, Ri, Qi) where {Scalar<:Number}
 
-        if N < 3
-            error("N<3 not supported")
+    function DiagonalSSS{Scalar}(D) where {Scalar<:Number}
+
+        if any([size(Di, 1) != size(Di, 2) for Di in D])
+            error("All diagonal block entries must be square.")
         end
+
+        n = [size(Di, 1) for Di in D]
+        no_blocks = length(D)
+        N = sum(n)
+
+
+        new{Scalar}(map(x -> convert(Matrix{Scalar}, x), D), n, no_blocks, N)
+    end
+
+end
+Base.:size(A::DiagonalSSS) = (A.N, A.N)
+
+
+
+
+struct TriangularSSS{Scalar<:Number}
+
+    # attributes required for construction
+    inp::Vector{AbstractMatrix{Scalar}}
+    trans::Vector{AbstractMatrix{Scalar}}
+    out::Vector{AbstractMatrix{Scalar}}
+
+    # attributes generated in construction
+    n::Vector{Int64}
+    no_blocks::Int64
+    N::Int64
+    hankel_ranks::Vector{Int64}   # hankel block ranks lower triangular part
+
+
+    function TriangularSSS{Scalar}(inp, trans, out) where {Scalar<:Number}
+
 
         # check input dimensions
-        if length(n) != N || length(Di) != N || length(Ui) != N - 1 ||
-           length(Wi) != N - 2 || length(Vi) != N - 1 || length(Pi) != N - 1 ||
-           length(Ri) != N - 2 || length(Qi) != N - 1 || length(Hpi) != N - 1 ||
-           length(Gpi) != N - 1
+        if !(length(out) == length(inp) == length(trans))
             error("Input dimensions do not agree")
         end
+        no_blocks = length(out)
 
-        # check diagonal matrix dimensions
-        for i = 1:N
-            if size(Di[i], 1) != n[i] || size(Di[i], 2) != n[i]
-                error("Diagonal matrices dimensions mismatch")
-            end
+        if any([size(out_i, 1) != size(inp_i, 1) for (out_i, inp_i) in zip(out, inp)])
+            error("dimensions inconsistent.")
         end
-
-        # check upper triangular matrix dimensions
-        for i = 1:N-1
-            if size(Ui[i], 1) != n[i] || size(Ui[i], 2) != Hpi[i]
-                error("Ui matrices dimensions mismatch")
-            end
-            if size(Vi[i], 1) != n[i+1] || size(Vi[i], 2) != Hpi[i]
-                error("Vi matrices dimensions mismatch")
-            end
-        end
-        for i = 1:N-2
-            if size(Wi[i], 1) != Hpi[i] || size(Wi[i], 2) != Hpi[i+1]
-                error("Wi matrices dimensions mismatch")
-            end
-        end
+        n = [size(out_i, 1) for out_i in out]
+        N = sum(n)
 
         # check lower triangular matrix dimensions
-        for i = 1:N-1
-            if size(Pi[i], 1) != n[i+1] || size(Pi[i], 2) != Gpi[i]
-                error("Pi matrices dimensions mismatch")
-            end
-            if size(Qi[i], 1) != n[i] || size(Qi[i], 2) != Gpi[i]
-                error("Qi matrices dimensions mismatch")
+        for i = 1:no_blocks-1
+            if size(out[i+1], 2) != size(inp[i], 2)
+                error("P and Q matrices dimensions mismatch")
             end
         end
-        for i = 1:N-2
-            if size(Ri[i], 1) != Gpi[i+1] || size(Ri[i], 2) != Gpi[i]
-                error("Ri translation operators dimensions mismatch")
+        for i = 1:no_blocks-2
+            if size(out[i], 1) != size(trans[i+1], 2)
+                error("Q and R matrices dimensions mismatch")
+            end
+        end
+        for i = 2:no_blocks-2
+            if size(trans[i], 1) != size(trans[i+1], 2)
+                error("R translation operators dimensions mismatch")
+            end
+        end
+        for i = 3:no_blocks
+            if size(inp[i], 2) != size(trans[i-1], 1)
+                error("R translation operators dimensions mismatch")
             end
         end
 
-        new{Scalar}(N, n, Gpi, Hpi,
-            map(x -> convert(Matrix{Scalar}, x), Di),
-            map(x -> convert(Matrix{Scalar}, x), Ui),
-            map(x -> convert(Matrix{Scalar}, x), Wi),
-            map(x -> convert(Matrix{Scalar}, x), Vi),
-            map(x -> convert(Matrix{Scalar}, x), Pi),
-            map(x -> convert(Matrix{Scalar}, x), Ri),
-            map(x -> convert(Matrix{Scalar}, x), Qi))
+        hankel_ranks = [size(inp[i], 2) for i in 1:(no_blocks-1)]
 
+        new{Scalar}(map(x -> convert(Matrix{Scalar}, x), inp),
+            map(x -> convert(Matrix{Scalar}, x), trans),
+            map(x -> convert(Matrix{Scalar}, x), out),
+            N, n, no_blocks, hankel_ranks)
 
     end
 
 end
-Base.:size(A::DiagonalSSS) = (sum(A.n), sum(A.n))
 
 
 
 
+struct StrictlyLowerTriangularSSS{Scalar<:Number} <: SSSFamily{Scalar}
 
-struct StrictlyLowerTriangularSSS{Scalar<:Number} <: AbstractMatrix{Scalar}
-    N::Int64
-    n::Vector{Int64}
-    Gpi::Vector{Int64}   # hankel block ranks lower triangular part
-    Hpi::Vector{Int64}   # hankel block rank upper triangular part
-    # main diagonal
-    Di::Vector{Matrix{Scalar}}
-    # upper triangular part
-    Ui::Vector{Matrix{Scalar}}
-    Wi::Vector{Matrix{Scalar}}
-    Vi::Vector{Matrix{Scalar}}
-    # lower triangular part
-    Pi::Vector{Matrix{Scalar}}
-    Ri::Vector{Matrix{Scalar}}
-    Qi::Vector{Matrix{Scalar}}
 
-    function StrictlyLowerTriangularSSS{Scalar}(N, n, Gpi, Hpi, Di, Ui, Wi, Vi, Pi, Ri, Qi) where {Scalar<:Number}
+    # attributes generated in construction
+    lower::TriangularSSS{Scalar}
 
-        if N < 3
-            error("N<3 not supported")
-        end
+    function StrictlyLowerTriangularSSS{Scalar}(Q, R, P) where {Scalar<:Number}
 
-        # check input dimensions
-        if length(n) != N || length(Di) != N || length(Ui) != N - 1 ||
-           length(Wi) != N - 2 || length(Vi) != N - 1 || length(Pi) != N - 1 ||
-           length(Ri) != N - 2 || length(Qi) != N - 1 || length(Hpi) != N - 1 ||
-           length(Gpi) != N - 1
-            error("Input dimensions do not agree")
-        end
-
-        # check diagonal matrix dimensions
-        for i = 1:N
-            if size(Di[i], 1) != n[i] || size(Di[i], 2) != n[i]
-                error("Diagonal matrices dimensions mismatch")
-            end
-        end
-
-        # check upper triangular matrix dimensions
-        for i = 1:N-1
-            if size(Ui[i], 1) != n[i] || size(Ui[i], 2) != Hpi[i]
-                error("Ui matrices dimensions mismatch")
-            end
-            if size(Vi[i], 1) != n[i+1] || size(Vi[i], 2) != Hpi[i]
-                error("Vi matrices dimensions mismatch")
-            end
-        end
-        for i = 1:N-2
-            if size(Wi[i], 1) != Hpi[i] || size(Wi[i], 2) != Hpi[i+1]
-                error("Wi matrices dimensions mismatch")
-            end
-        end
-
-        # check lower triangular matrix dimensions
-        for i = 1:N-1
-            if size(Pi[i], 1) != n[i+1] || size(Pi[i], 2) != Gpi[i]
-                error("Pi matrices dimensions mismatch")
-            end
-            if size(Qi[i], 1) != n[i] || size(Qi[i], 2) != Gpi[i]
-                error("Qi matrices dimensions mismatch")
-            end
-        end
-        for i = 1:N-2
-            if size(Ri[i], 1) != Gpi[i+1] || size(Ri[i], 2) != Gpi[i]
-                error("Ri translation operators dimensions mismatch")
-            end
-        end
-
-        new{Scalar}(N, n, Gpi, Hpi,
-            map(x -> convert(Matrix{Scalar}, x), Di),
-            map(x -> convert(Matrix{Scalar}, x), Ui),
-            map(x -> convert(Matrix{Scalar}, x), Wi),
-            map(x -> convert(Matrix{Scalar}, x), Vi),
-            map(x -> convert(Matrix{Scalar}, x), Pi),
-            map(x -> convert(Matrix{Scalar}, x), Ri),
-            map(x -> convert(Matrix{Scalar}, x), Qi))
-
+        new{Scalar}(TriangularSSS{Scalar}(Q, R, P))
 
     end
 
 end
-Base.:size(A::StrictlyLowerTriangularSSS) = (sum(A.n), sum(A.n))
+Base.:size(A::StrictlyLowerTriangularSSS) = (A.lower.N, A.lower.N)
 
+
+
+
+struct StrictlyUpperTriangularSSS{Scalar<:Number} <: AbstractMatrix{Scalar}
+
+    # attributes generated in construction
+    upper::TriangularSSS{Scalar}
+
+    function StrictlyUpperTriangularSSS{Scalar}(V, W, U) where {Scalar<:Number}
+
+        new{Scalar}(TriangularSSS{Scalar}(V, W, U))
+
+    end
+
+end
+Base.:size(A::StrictlyUpperTriangularSSS) = (A.upper.N, A.upper.N)
+
+
+
+
+struct UpperTriangularSSS{Scalar<:Number} <: AbstractMatrix{Scalar}
+
+    # attributes generated in construction
+    diagonal::DiagonalSSS{Scalar}
+    upper::StrictlyUpperTriangularSSS{Scalar}
+
+    function UpperTriangularSSS{Scalar}(D, Q, R, P, V, W, U) where {Scalar<:Number}
+
+        diagonal = DiagonalSSS{Scalar}(D)
+        upper = StrictlyUpperTriangularSSS{Scalar}(V, W, U)
+
+
+        if !(diagonal.no_blocks == upper.no_blocks)
+            error("No blocks not consistent")
+        end
+        if any(diagonal.n .!= upper.n)
+            error("dimensions of blocks not consistent")
+        end
+
+
+        new{Scalar}(diagonal, upper)
+
+    end
+
+end
+Base.:size(A::UpperTriangularSSS) = (A.diagonal.N, A.diagonal.N)
+
+
+struct LowerTriangularSSS{Scalar<:Number} <: AbstractMatrix{Scalar}
+
+    # attributes generated in construction
+    diagonal::DiagonalSSS{Scalar}
+    lower::StrictlyLowerTriangularSSS{Scalar}
+
+    function LowerTriangularSSS{Scalar}(D, Q, R, P, V, W, U) where {Scalar<:Number}
+
+        diagonal = DiagonalSSS{Scalar}(D)
+        lower = StrictlyLowerTriangularSSS{Scalar}(V, W, U)
+
+
+        if !(diagonal.no_blocks == lower.no_blocks)
+            error("No blocks not consistent")
+        end
+        if any(diagonal.n .!= lower.n)
+            error("dimensions of blocks not consistent")
+        end
+
+
+        new{Scalar}(diagonal, lower)
+
+    end
+
+end
+Base.:size(A::LowerTriangularSSS) = (A.diagonal.N, A.diagonal.N)
 
 
 
 
 struct SSS{Scalar<:Number} <: AbstractMatrix{Scalar}
-    N::Int64
-    n::Vector{Int64}
-    Gpi::Vector{Int64}   # hankel block ranks lower triangular part
-    Hpi::Vector{Int64}   # hankel block rank upper triangular part
-    # main diagonal
-    Di::Vector{Matrix{Scalar}}
-    # upper triangular part
-    Ui::Vector{Matrix{Scalar}}
-    Wi::Vector{Matrix{Scalar}}
-    Vi::Vector{Matrix{Scalar}}
-    # lower triangular part
-    Pi::Vector{Matrix{Scalar}}
-    Ri::Vector{Matrix{Scalar}}
-    Qi::Vector{Matrix{Scalar}}
 
-    function SSS{Scalar}(N, n, Gpi, Hpi, Di, Ui, Wi, Vi, Pi, Ri, Qi) where {Scalar<:Number}
+    # attributes generated in construction
+    diagonal::DiagonalSSS{Scalar}
+    lower::StrictlyLowerTriangularSSS{Scalar}
+    upper::StrictlyUpperTriangularSSS{Scalar}
 
-        if N < 3
-            error("N<3 not supported")
+    function SSS{Scalar}(D, Q, R, P, V, W, U) where {Scalar<:Number}
+
+        diagonal = DiagonalSSS{Scalar}(D)
+        lower = StrictlyLowerTriangularSSS{Scalar}(R, P, V)
+        upper = StrictlyUpperTriangularSSS{Scalar}(V, W, U)
+
+
+        if !(diagonal.no_blocks == lower.no_blocks == upper.no_blocks)
+            error("No blocks not consistent")
+        end
+        if any(diagonal.n .!= lower.n .!= upper.n)
+            error("dimensions of blocks not consistent")
         end
 
-        # check input dimensions
-        if length(n) != N || length(Di) != N || length(Ui) != N - 1 ||
-           length(Wi) != N - 2 || length(Vi) != N - 1 || length(Pi) != N - 1 ||
-           length(Ri) != N - 2 || length(Qi) != N - 1 || length(Hpi) != N - 1 ||
-           length(Gpi) != N - 1
-            error("Input dimensions do not agree")
-        end
 
-        # check diagonal matrix dimensions
-        for i = 1:N
-            if size(Di[i], 1) != n[i] || size(Di[i], 2) != n[i]
-                error("Diagonal matrices dimensions mismatch")
-            end
-        end
-
-        # check upper triangular matrix dimensions
-        for i = 1:N-1
-            if size(Ui[i], 1) != n[i] || size(Ui[i], 2) != Hpi[i]
-                error("Ui matrices dimensions mismatch")
-            end
-            if size(Vi[i], 1) != n[i+1] || size(Vi[i], 2) != Hpi[i]
-                error("Vi matrices dimensions mismatch")
-            end
-        end
-        for i = 1:N-2
-            if size(Wi[i], 1) != Hpi[i] || size(Wi[i], 2) != Hpi[i+1]
-                error("Wi matrices dimensions mismatch")
-            end
-        end
-
-        # check lower triangular matrix dimensions
-        for i = 1:N-1
-            if size(Pi[i], 1) != n[i+1] || size(Pi[i], 2) != Gpi[i]
-                error("Pi matrices dimensions mismatch")
-            end
-            if size(Qi[i], 1) != n[i] || size(Qi[i], 2) != Gpi[i]
-                error("Qi matrices dimensions mismatch")
-            end
-        end
-        for i = 1:N-2
-            if size(Ri[i], 1) != Gpi[i+1] || size(Ri[i], 2) != Gpi[i]
-                error("Ri translation operators dimensions mismatch")
-            end
-        end
-
-        new{Scalar}(N, n, Gpi, Hpi,
-            map(x -> convert(Matrix{Scalar}, x), Di),
-            map(x -> convert(Matrix{Scalar}, x), Ui),
-            map(x -> convert(Matrix{Scalar}, x), Wi),
-            map(x -> convert(Matrix{Scalar}, x), Vi),
-            map(x -> convert(Matrix{Scalar}, x), Pi),
-            map(x -> convert(Matrix{Scalar}, x), Ri),
-            map(x -> convert(Matrix{Scalar}, x), Qi))
-
+        new{Scalar}(diagonal, lower, upper)
 
     end
 
 end
-Base.:size(A::SSS) = (sum(A.n), sum(A.n))
-
-
-
-function Base.:Matrix{Scalar}(A::SSS) where {Scalar<:Number}
-    # assertions
-
-    ntot = sum(A.n)
-    Adense = zeros(Scalar, ntot, ntot)
-    off = [0; cumsum(A.n)]
-
-    #fill up diagonal part
-    for i = 1:A.N
-        Adense[off[i]+1:off[i]+A.n[i], off[i]+1:off[i]+A.n[i]] = A.Di[i]
-    end
-
-    # fill up lower triangular part
-    for j = 1:(A.N-1)
-        temp = transpose(A.Qi[j])
-        for i = j+1:A.N
-            Adense[off[i]+1:off[i]+A.n[i], off[j]+1:off[j]+A.n[j]] = A.Pi[i-1] * temp
-            if i != A.N
-                temp = A.Ri[i-1] * temp
-            end
-        end
-    end
-
-    # fill up upper triangular part
-    for j = A.N:-1:2
-        temp = transpose(A.Vi[j-1])
-        for i = j-1:-1:1
-            Adense[off[i]+1:off[i]+A.n[i], off[j]+1:off[j]+A.n[j]] = A.Ui[i] * temp
-            if i != 1
-                temp = A.Wi[i-1] * temp
-            end
-        end
-    end
-
-    return Adense
-end
-
-
-
-
-
-
-
-
-
-
+Base.:size(A::SSS) = (A.diagonal.N, A.diagonal.N)
 
