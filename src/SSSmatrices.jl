@@ -4,6 +4,7 @@ module SSSmatrices
 using LinearAlgebra
 using Random
 using SparseArrays
+using Tullio
 
 export greet
 greet() = print("Hello! welcome to the SSSmatrices package")
