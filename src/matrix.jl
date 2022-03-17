@@ -1,47 +1,43 @@
-function Base.:Matrix{Scalar}(A::SSS) where {Scalar<:Number}
-    # assertions
+function diagonalfill!(A, diagonal::DiagonalPart, off::Vector{Integer}, N::Integer)
 
-    ntot = sum(A.n)
-    Adense = zeros(Scalar, ntot, ntot)
-    off = [0; cumsum(A.n)]
-
-    #fill up diagonal part
-    for i = 1:A.N
-        Adense[off[i]+1:off[i]+A.n[i], off[i]+1:off[i]+A.n[i]] = A.Di[i]
+    for i = 1:N
+        A[off[i]+1:block_i[i+1], off[i]+1:block_i[i+1]] = diagonal[i]
     end
 
-    # fill up lower triangular part
-    for j = 1:(A.N-1)
-        temp = transpose(A.Qi[j])
-        for i = j+1:A.N
-            Adense[off[i]+1:off[i]+A.n[i], off[j]+1:off[j]+A.n[j]] = A.Pi[i-1] * temp
-            if i != A.N
-                temp = A.Ri[i-1] * temp
-            end
-        end
-    end
-
-    # fill up upper triangular part
-    for j = A.N:-1:2
-        temp = transpose(A.Vi[j-1])
-        for i = j-1:-1:1
-            Adense[off[i]+1:off[i]+A.n[i], off[j]+1:off[j]+A.n[j]] = A.Ui[i] * temp
-            if i != 1
-                temp = A.Wi[i-1] * temp
-            end
-        end
-    end
-
-    return Adense
 end
 
 
+function triangularfill!(A, triang::TriangularPart, off::Vector{Integer}, N::Integer)
+
+    for j = 1:N
+
+        temp = triang.inp[j]'
+
+        for i = j+1:n
+
+            Adense[off[i]+1:block_i[i+1], off[j]+1:block_i[j+1]] = triang.out[i] * temp
+            temp = triang.trans[i] * temp
+
+        end
+
+    end
+
+end
 
 
+function Base.:Matrix{Scalar}(A::SSS) where {Scalar<:Number}
 
 
+    Adense = zeros(Scalar, ntot, ntot)
 
+    #fill up diagonal part
+    diagonalfill!(Adense, A.diagonal, A.off, A.N)
+    # fill up lower triangular part
+    triangularfill!(Adense, A.lower, A.off, A.N)
+    # fill up upper triangular part
+    triangularfill!(Adense', A.upper, A.off, A.N)
 
-
+    return Adense
+end
 
 

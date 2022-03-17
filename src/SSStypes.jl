@@ -1,68 +1,45 @@
-export SSSFamily, DiagonalSSS, StrictlyLowerTriangularSSS, StrictlyUpperTriangularSSS, LowerTriangularSSS, UpperTriangularSSS, SSS
-
-
-abstract type SSSFamily{Scalar<:Number} <: AbstractMatrix{Scalar} end
-
-
-struct DiagonalSSS{Scalar<:Number} <: SSSFamily{Scalar}
+struct DiagonalPart{Scalar<:Number}
 
     # attributes required for construction
     D::Vector{AbstractMatrix{Scalar}}
 
-    # attributes generated in construction
-    n::Vector{Int64}
-    no_blocks::Int64
-    N::Int64
-
-
-    function DiagonalSSS{Scalar}(D) where {Scalar<:Number}
+    function DiagonalPart(D::Vector{<:AbstractMatrix{T}}) where {T<:Number}
 
         if any([size(Di, 1) != size(Di, 2) for Di in D])
             error("All diagonal block entries must be square.")
         end
+        Scalar = eltype(eltype(D))
+        new{Scalar}(D)
 
-        n = [size(Di, 1) for Di in D]
-        no_blocks = length(D)
-        N = sum(n)
-
-
-        new{Scalar}(map(x -> convert(Matrix{Scalar}, x), D), n, no_blocks, N)
     end
 
 end
-Base.:size(A::DiagonalSSS) = (A.N, A.N)
 
-
-
-
-struct TriangularSSS{Scalar<:Number}
+struct TriangularPart{Scalar<:Number}
 
     # attributes required for construction
     inp::Vector{AbstractMatrix{Scalar}}
     trans::Vector{AbstractMatrix{Scalar}}
     out::Vector{AbstractMatrix{Scalar}}
 
-    # attributes generated in construction
-    n::Vector{Int64}
-    no_blocks::Int64
-    N::Int64
-    hankel_ranks::Vector{Int64}   # hankel block ranks lower triangular part
 
 
-    function TriangularSSS{Scalar}(inp, trans, out) where {Scalar<:Number}
+    function TriangularPart(
+        inp::Vector{<:AbstractMatrix{T}},
+        trans::Vector{<:AbstractMatrix{T}},
+        out::Vector{<:AbstractMatrix{T}}) where {T<:Number}
 
 
         # check input dimensions
         if !(length(out) == length(inp) == length(trans))
             error("Input dimensions do not agree")
         end
-        no_blocks = length(out)
+
 
         if any([size(out_i, 1) != size(inp_i, 1) for (out_i, inp_i) in zip(out, inp)])
             error("dimensions inconsistent.")
         end
-        n = [size(out_i, 1) for out_i in out]
-        N = sum(n)
+
 
         # check lower triangular matrix dimensions
         for i = 1:no_blocks-1
@@ -86,12 +63,8 @@ struct TriangularSSS{Scalar<:Number}
             end
         end
 
-        hankel_ranks = [size(inp[i], 2) for i in 1:(no_blocks-1)]
-
-        new{Scalar}(map(x -> convert(Matrix{Scalar}, x), inp),
-            map(x -> convert(Matrix{Scalar}, x), trans),
-            map(x -> convert(Matrix{Scalar}, x), out),
-            N, n, no_blocks, hankel_ranks)
+        Scalar = eltype(eltype(inp))
+        new{Scalar}(inp, trans, out)
 
     end
 
@@ -99,126 +72,86 @@ end
 
 
 
+########### SSS types ############
 
-struct StrictlyLowerTriangularSSS{Scalar<:Number} <: SSSFamily{Scalar}
+
+export SSSFamily, DiagonalSSS, SSS
+# To be done: StrictlyLowerTriangularSSS, StrictlyUpperTriangularSSS, LowerTriangularSSS, UpperTriangularSSS, HermitianSSS
+
+abstract type SSSFamily{Scalar<:Number} <: AbstractMatrix{Scalar} end
+
+
+struct DiagonalSSS{Scalar<:Number} <: SSSFamily{Scalar}
 
 
     # attributes generated in construction
-    lower::TriangularSSS{Scalar}
+    diagonal::DiagonalPart{Scalar}
+    n::Vector{Int}
+    no_blocks::Int
+    N::Int
+    off::Vector{Int}
 
-    function StrictlyLowerTriangularSSS{Scalar}(Q, R, P) where {Scalar<:Number}
+    function DiagonalSSS(D::Vector{<:AbstractMatrix{T}}) where {T<:Number}
 
-        new{Scalar}(TriangularSSS{Scalar}(Q, R, P))
+        diagonal = DiagonalPart(D)
 
+        n = [size(Di, 1) for Di in diagonal.D]
+        no_blocks = length(diagonal.D)
+        N = sum(n)
+        off = [0; cumsum(n)]
+        Scalar = eltype(eltype(D))
+        new{Scalar}(diagonal, n, no_blocks, N, off)
     end
 
 end
-Base.:size(A::StrictlyLowerTriangularSSS) = (A.lower.N, A.lower.N)
-
-
-
-
-struct StrictlyUpperTriangularSSS{Scalar<:Number} <: AbstractMatrix{Scalar}
-
-    # attributes generated in construction
-    upper::TriangularSSS{Scalar}
-
-    function StrictlyUpperTriangularSSS{Scalar}(V, W, U) where {Scalar<:Number}
-
-        new{Scalar}(TriangularSSS{Scalar}(V, W, U))
-
-    end
-
-end
-Base.:size(A::StrictlyUpperTriangularSSS) = (A.upper.N, A.upper.N)
-
-
-
-
-struct UpperTriangularSSS{Scalar<:Number} <: AbstractMatrix{Scalar}
-
-    # attributes generated in construction
-    diagonal::DiagonalSSS{Scalar}
-    upper::StrictlyUpperTriangularSSS{Scalar}
-
-    function UpperTriangularSSS{Scalar}(D, Q, R, P, V, W, U) where {Scalar<:Number}
-
-        diagonal = DiagonalSSS{Scalar}(D)
-        upper = StrictlyUpperTriangularSSS{Scalar}(V, W, U)
-
-
-        if !(diagonal.no_blocks == upper.no_blocks)
-            error("No blocks not consistent")
-        end
-        if any(diagonal.n .!= upper.n)
-            error("dimensions of blocks not consistent")
-        end
-
-
-        new{Scalar}(diagonal, upper)
-
-    end
-
-end
-Base.:size(A::UpperTriangularSSS) = (A.diagonal.N, A.diagonal.N)
-
-
-struct LowerTriangularSSS{Scalar<:Number} <: AbstractMatrix{Scalar}
-
-    # attributes generated in construction
-    diagonal::DiagonalSSS{Scalar}
-    lower::StrictlyLowerTriangularSSS{Scalar}
-
-    function LowerTriangularSSS{Scalar}(D, Q, R, P, V, W, U) where {Scalar<:Number}
-
-        diagonal = DiagonalSSS{Scalar}(D)
-        lower = StrictlyLowerTriangularSSS{Scalar}(V, W, U)
-
-
-        if !(diagonal.no_blocks == lower.no_blocks)
-            error("No blocks not consistent")
-        end
-        if any(diagonal.n .!= lower.n)
-            error("dimensions of blocks not consistent")
-        end
-
-
-        new{Scalar}(diagonal, lower)
-
-    end
-
-end
-Base.:size(A::LowerTriangularSSS) = (A.diagonal.N, A.diagonal.N)
-
 
 
 
 struct SSS{Scalar<:Number} <: AbstractMatrix{Scalar}
 
     # attributes generated in construction
-    diagonal::DiagonalSSS{Scalar}
-    lower::StrictlyLowerTriangularSSS{Scalar}
-    upper::StrictlyUpperTriangularSSS{Scalar}
+    diagonal::DiagonalPart{Scalar}
+    lower::TriangularPart{Scalar}
+    upper::TriangularPart{Scalar}
 
-    function SSS{Scalar}(D, Q, R, P, V, W, U) where {Scalar<:Number}
+    n::Vector{Int}
+    no_blocks::Int
+    N::Int
+    lower_hankel_ranks::Vector{Int}
+    upper_hankel_ranks::Vector{Int}
+    off::Vector{Int}
 
-        diagonal = DiagonalSSS{Scalar}(D)
-        lower = StrictlyLowerTriangularSSS{Scalar}(R, P, V)
-        upper = StrictlyUpperTriangularSSS{Scalar}(V, W, U)
+    function SSS(
+        D::Vector{<:AbstractMatrix{T}},
+        Q::Vector{<:AbstractMatrix{T}},
+        R::Vector{<:AbstractMatrix{T}},
+        P::Vector{<:AbstractMatrix{T}},
+        V::Vector{<:AbstractMatrix{T}},
+        W::Vector{<:AbstractMatrix{T}},
+        U::Vector{<:AbstractMatrix{T}}) where {T<:Number}
 
 
-        if !(diagonal.no_blocks == lower.no_blocks == upper.no_blocks)
-            error("No blocks not consistent")
+        if any([!(size(Di, 1) == size(Pi, 1) == size(Vi, 1)) for (Di, Pi, Vi) in zip(D, P, V)])
+            error("dimensions inconsistent.")
         end
-        if any(diagonal.n .!= lower.n .!= upper.n)
-            error("dimensions of blocks not consistent")
-        end
 
 
-        new{Scalar}(diagonal, lower, upper)
+        diagonal = DiagonalPart(D)
+        lower = TriangularPart(Q, R, P)
+        upper = TriangularPart(U, W, V)
+
+        n = [size(Di, 1) for Di in D]
+        no_blocks = length(D)
+        N = sum(N)
+        lower_hankel_ranks = [size(Qi, 2) for Qi in Q]
+        upper_hankel_ranks = [size(Ui, 2) for Ui in U]
+        off = [0; cumsum(n)]
+
+        Scalar = eltype(eltype(D))
+        new{Scalar}(diagonal, lower, upper, n, no_blocks, N, lower_hankel_ranks, upper_hankel_ranks, off)
 
     end
 
 end
-Base.:size(A::SSS) = (A.diagonal.N, A.diagonal.N)
+
 

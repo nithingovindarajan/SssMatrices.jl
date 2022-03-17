@@ -10,17 +10,22 @@ greet() = print("Hello! welcome to the SSSmatrices package")
 
 
 # include relevant files
-include("utilities.jl")
 include("SSStypes.jl")
-include("construction.jl")
-include("addition.jl")
+include("sizes.jl")
 include("matrixvectormultiplication.jl")
-include("matrixmatrixmultiplication.jl")
+include("getindex.jl")
+include("matrix.jl")
+include("lra.jl")
+include("construction.jl")
+#include("addition.jl")
+#include("matrixmatrixmultiplication.jl")
+#include("LU.jl")
+#include("ULV.jl")
+#include("QR.jl")
 include("solve.jl")
-include("LU.jl")
-include("ULV.jl")
-include("QR.jl")
-include("casestudies.jl")
+include("CauchySSS.jl")
+include("LDRmatrices.jl")
+#include("casestudies.jl")
 
 
 
