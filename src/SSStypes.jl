@@ -34,34 +34,41 @@ struct TriangularPart{Scalar<:Number}
         if !(length(out) == length(inp) == length(trans))
             error("Input dimensions do not agree")
         end
-
+        no_blocks = length(out)
 
         if any([size(out_i, 1) != size(inp_i, 1) for (out_i, inp_i) in zip(out, inp)])
             error("dimensions inconsistent.")
         end
 
+        #TODO write this more efficiently...
 
         # check lower triangular matrix dimensions
+
         for i = 1:no_blocks-1
             if size(out[i+1], 2) != size(inp[i], 2)
                 error("P and Q matrices dimensions mismatch")
             end
         end
         for i = 1:no_blocks-2
-            if size(out[i], 1) != size(trans[i+1], 2)
+            if size(inp[i], 2) != size(trans[i+1], 2)
                 error("Q and R matrices dimensions mismatch")
             end
         end
-        for i = 2:no_blocks-2
+        for i = 1:no_blocks-1
             if size(trans[i], 1) != size(trans[i+1], 2)
                 error("R translation operators dimensions mismatch")
             end
         end
         for i = 3:no_blocks
-            if size(inp[i], 2) != size(trans[i-1], 1)
+            if size(out[i], 2) != size(trans[i-1], 1)
                 error("R translation operators dimensions mismatch")
             end
         end
+        @assert size(inp[end], 2) == 0
+        @assert size(out[1], 2) == 0
+        @assert size(trans[1], 2) == 0
+        @assert size(trans[end], 1) == 0
+
 
         Scalar = eltype(eltype(inp))
         new{Scalar}(inp, trans, out)
@@ -126,9 +133,9 @@ struct SSS{Scalar<:Number} <: AbstractMatrix{Scalar}
         Q::Vector{<:AbstractMatrix{T}},
         R::Vector{<:AbstractMatrix{T}},
         P::Vector{<:AbstractMatrix{T}},
-        V::Vector{<:AbstractMatrix{T}},
+        U::Vector{<:AbstractMatrix{T}},
         W::Vector{<:AbstractMatrix{T}},
-        U::Vector{<:AbstractMatrix{T}}) where {T<:Number}
+        V::Vector{<:AbstractMatrix{T}}) where {T<:Number}
 
 
         if any([!(size(Di, 1) == size(Pi, 1) == size(Vi, 1)) for (Di, Pi, Vi) in zip(D, P, V)])
@@ -142,9 +149,9 @@ struct SSS{Scalar<:Number} <: AbstractMatrix{Scalar}
 
         n = [size(Di, 1) for Di in D]
         no_blocks = length(D)
-        N = sum(N)
-        lower_hankel_ranks = [size(Qi, 2) for Qi in Q]
-        upper_hankel_ranks = [size(Ui, 2) for Ui in U]
+        N = sum(n)
+        lower_hankel_ranks = [size(Q[i], 2) for i = 1:no_blocks-1]
+        upper_hankel_ranks = [size(U[i], 2) for i = 1:no_blocks-1]
         off = [0; cumsum(n)]
 
         Scalar = eltype(eltype(D))
@@ -153,5 +160,6 @@ struct SSS{Scalar<:Number} <: AbstractMatrix{Scalar}
     end
 
 end
+
 
 
