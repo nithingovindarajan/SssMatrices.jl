@@ -54,9 +54,13 @@ greet()
     A_SSS = SSS(D, Q, R, P, U, W, V)
 
     x = rand(size(A_SSS, 1))
+    X = rand(size(A_SSS, 2), 20)
+    Y = rand(15, size(A_SSS, 1))
 
-    A_SSS * x
+    @test A_SSS * x ≈ Matrix(A_SSS) * x
+    @test A_SSS * X ≈ Matrix(A_SSS) * X
 
+    # TODO: @test Y * A_SSS ≈ Y * Matrix(A_SSS)
 
 end
 

@@ -1,21 +1,21 @@
-function diagonalfill!(A, diagonal::DiagonalPart, off::Vector{Integer}, N::Integer)
+function diagonalfill!(Adense, diagonal::DiagonalPart, off::Vector{<:Integer}, no_blocks::Integer)
 
-    for i = 1:N
-        A[off[i]+1:block_i[i+1], off[i]+1:block_i[i+1]] = diagonal[i]
+    for i = 1:no_blocks
+        Adense[off[i]+1:off[i+1], off[i]+1:off[i+1]] = diagonal.D[i]
     end
 
 end
 
 
-function triangularfill!(A, triang::TriangularPart, off::Vector{Integer}, N::Integer)
+function triangularfill!(Adense, triang::TriangularPart, off::Vector{<:Integer}, no_blocks::Integer)
 
-    for j = 1:N
+    for j = 1:no_blocks
 
         temp = triang.inp[j]'
 
-        for i = j+1:n
+        for i = j+1:no_blocks
 
-            Adense[off[i]+1:block_i[i+1], off[j]+1:block_i[j+1]] = triang.out[i] * temp
+            Adense[off[i]+1:off[i+1], off[j]+1:off[j+1]] = triang.out[i] * temp
             temp = triang.trans[i] * temp
 
         end
@@ -28,14 +28,14 @@ end
 function Base.:Matrix{Scalar}(A::SSS) where {Scalar<:Number}
 
 
-    Adense = zeros(Scalar, ntot, ntot)
+    Adense = zeros(Scalar, A.N, A.N)
 
     #fill up diagonal part
-    diagonalfill!(Adense, A.diagonal, A.off, A.N)
+    diagonalfill!(Adense, A.diagonal, A.off, A.no_blocks)
     # fill up lower triangular part
-    triangularfill!(Adense, A.lower, A.off, A.N)
+    triangularfill!(Adense, A.lower, A.off, A.no_blocks)
     # fill up upper triangular part
-    triangularfill!(Adense', A.upper, A.off, A.N)
+    triangularfill!(Adense', A.upper, A.off, A.no_blocks)
 
     return Adense
 end
