@@ -1,8 +1,9 @@
-function extract_diagonalpart(A::Matrix, n::Vector{Int}, N::Int, off:::Vector{Int})
+function extract_diagonalpart(A::AbstractMatrix, off::Vector{<:Integer}, no_blocks::Integer)
 
-    D = Matrix{Float64}[]
-    for i = 1:N
-        push!(D, A[off[i]+1:off[i]+n[i], off[i]+1:off[i]+n[i]])
+    Scalar = eltype(A)
+    D = Matrix{Scalar}[]
+    for i = 1:no_blocks
+        push!(D, A[off[i]+1:off[i+1], off[i]+1:off[i+1]])
     end
 
     return D
@@ -10,50 +11,51 @@ function extract_diagonalpart(A::Matrix, n::Vector{Int}, N::Int, off:::Vector{In
 end
 
 
-function extract_triangularpart(A::Matrix, n::Vector{Int}, N::Int) where {Scalar<:Number}
+function extract_triangularpart(A::AbstractMatrix, n::Vector{<:Integer}, off::Vector{<:Integer}, no_blocks::Integer, threshold)
 
     Scalar = eltype(A)
-    Pi = Matrix{Scalar}[]
-    Ri = Matrix{Scalar}[]
-    Qi = Matrix{Scalar}[]
-
-    # initialize
-    Z = zeros(sum(n[2:end]), 0)
-    Vn = zeros(0, 0)
-    r = 0
-    Rightprev = []
-    for i = 1:N-1
-
-        Z = hcat(Z, A[off[i+1]+1:end, off[i]+1:off[i+1]])
-        U, sigma, V, p = lowrankapprox(Z, threshold)
-        Vn = [Vn * V[1:r, :]
-            V[r+1:end, :]]
-        r = p
-
-        Right = Vn * Diagonal(sigma)
+    inp = Matrix{Scalar}[]
+    trans = Matrix{Scalar}[]
+    out = Matrix{Scalar}[]
 
 
+    # add out_(1)
+    push!(out, zeros(Scalar, n[1], 0))
+    # initialize Hbar
+    Hbar = zeros(Scalar, off[end] - off[2], 0)
 
-        # add Pi
-        push!(Pi, U[1:n[i+1], :])
-        # add Qi
-        push!(Qi, Right[off[i]+1:end, :])
-        if i != 1
-            # add Ri
-            push!(Ri, transpose(Rightprev \ Right[1:off[i], :]))
-        end
+    for i = 1:no_blocks-1
 
-        Z = U[n[i+1]+1:end, :] * Diagonal(sigma)
-        Rightprev = deepcopy(Right)
+        Htilde = [Hbar A[off[i+1]+1:end, off[i]+1:off[i+1]]]
+
+        # compute low rank approximation of Htilde
+        X, Y = lowrankapprox(Htilde, threshold)     # Note there is no gaurantee that X and Y have entries in Scalar: potential source of bugs
+
+
+        # add inp_(i)
+        push!(inp, Y[size(Hbar, 2)+1:end, :])
+        # add trans_(i)
+        push!(trans, Y[1:size(Hbar, 2), :]')
+        # add out_(i+1)
+        push!(out, X[1:n[i+1], :])
+
+        # determine next Hbar
+        Hbar = X[n[i+1]+1:end, :]
+
     end
+    # add inp_(N)
+    push!(inp, zeros(Scalar, n[no_blocks], 0))
+    # add trans_(N)
+    push!(trans, zeros(Scalar, size(Hbar, 2), 0)')
 
-    return Q, R, P
+
+    return inp, trans, out
 
 
 end
 
 
-function SSS(A::Matrix, n::Vector{Int64}, threshold::Float64 = 1E-10)
+function SSS(A::AbstractMatrix, n::Vector{<:Integer}, threshold::Float64=1E-14)
 
 
     # assertions
@@ -61,13 +63,24 @@ function SSS(A::Matrix, n::Vector{Int64}, threshold::Float64 = 1E-10)
     @assert sum(n) == size(A, 1) "Matrix partition is not valid"
 
     # some definitions
-    N = length(n)
+    no_blocks = length(n)
     off = [0; cumsum(n)]
 
     # Define
-    D = extract_diagonalpart(A, n, N, off)
-    Q, R, P = extract_triangularpart(A, n, N, off)
-    U, W, V = extract_triangularpart(A', n, N, off)
+    D = extract_diagonalpart(A, off, no_blocks)
+    Q, R, P = extract_triangularpart(A, n, off, no_blocks, threshold)
+    U, W, V = extract_triangularpart(A', n, off, no_blocks, threshold)
+
+    println(" ")
+    for (Di, Pi, Qi) in zip(D, P, Q)
+        print(size(Di, 1))
+        print(" ")
+        print(size(Pi, 1))
+        print(" ")
+        print(size(Qi, 1))
+        println(" ")
+
+    end
 
     return SSS(D, Q, R, P, U, W, V)
 

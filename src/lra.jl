@@ -4,17 +4,16 @@ function lowrankapprox(B::AbstractArray, threshold::Float64)
     U, sigma, V = svd(B)
 
     # rank
-    p = findlast(x -> x > threshold, sigma)
+    p = findlast(x -> x > sigma[1] * threshold, sigma)
     if p == nothing
         p = 0
     end
 
     #truncate
-    U = U[:, 1:p]
-    sigma = sigma[1:p]
-    V = V[:, 1:p]
+    X = U[:, 1:p]
+    Y = V[:, 1:p] * Diagonal(sigma[1:p])
 
-    return U, sigma, V, p
+    return X, Y
 end
 
 

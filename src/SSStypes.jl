@@ -138,7 +138,7 @@ struct SSS{Scalar<:Number} <: AbstractMatrix{Scalar}
         V::Vector{<:AbstractMatrix{T}}) where {T<:Number}
 
 
-        if any([!(size(Di, 1) == size(Pi, 1) == size(Vi, 1)) for (Di, Pi, Vi) in zip(D, P, V)])
+        if any([!(size(Di, 1) == size(Qi, 1) == size(Pi, 1) == size(Ui, 1) == size(Vi, 1)) for (Di, Pi, Qi, Ui, Vi) in zip(D, P, Q, U, V)])
             error("dimensions inconsistent.")
         end
 
@@ -160,6 +160,7 @@ struct SSS{Scalar<:Number} <: AbstractMatrix{Scalar}
     end
 
 end
+
 
 
 
