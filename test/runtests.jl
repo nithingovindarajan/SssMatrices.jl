@@ -87,7 +87,7 @@ end
 @testset "Dense to SSS matrix construction" begin
 
 
-    # construction
+    # test on randomly generated matrix
     A = rand(200, 200)
     n = [10, 20, 40, 10, 60, 40, 20]
 
@@ -97,6 +97,8 @@ end
     @test A_dense ≈ A
 
 
+
+    tridiagonalexample(n)
 
 end
 

@@ -26,7 +26,7 @@ include("construction.jl")
 #include("solve.jl")
 include("CauchySSS.jl")
 include("LDRmatrices.jl")
-#include("casestudies.jl")
+include("casestudies.jl")
 include("randomSSS.jl")
 
 
