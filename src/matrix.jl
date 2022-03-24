@@ -25,10 +25,9 @@ function triangularfill!(Adense, triang::TriangularPart, off::Vector{<:Integer},
 end
 
 
-function Base.:Matrix{Scalar}(A::SSS) where {Scalar<:Number}
+function Base.:Matrix(A::SSS)
 
-
-    Adense = zeros(Scalar, A.N, A.N)
+    Adense = zeros(eltype(A), A.N, A.N)
 
     #fill up diagonal part
     diagonalfill!(Adense, A.diagonal, A.off, A.no_blocks)
@@ -41,3 +40,7 @@ function Base.:Matrix{Scalar}(A::SSS) where {Scalar<:Number}
 end
 
 
+function Base.:Matrix(A::Adjoint{Scalar,SSS{Scalar}}) where {Scalar<:Number}
+
+    return Matrix(Matrix(A')')
+end

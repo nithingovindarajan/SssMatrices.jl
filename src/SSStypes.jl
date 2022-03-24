@@ -5,7 +5,7 @@ struct DiagonalPart{Scalar<:Number}
 
     function DiagonalPart(D::Vector{<:AbstractMatrix{T}}) where {T<:Number}
 
-        if any([size(Di, 1) != size(Di, 2) for Di in D])
+        if any([size(Di, 1) != size(Di, 2) for Di ∈ D])
             error("All diagonal block entries must be square.")
         end
         Scalar = eltype(eltype(D))
@@ -36,7 +36,7 @@ struct TriangularPart{Scalar<:Number}
         end
         no_blocks = length(out)
 
-        if any([size(out_i, 1) != size(inp_i, 1) for (out_i, inp_i) in zip(out, inp)])
+        if any([size(out_i, 1) != size(inp_i, 1) for (out_i, inp_i) ∈ zip(out, inp)])
             error("dimensions inconsistent.")
         end
 
@@ -102,12 +102,11 @@ struct DiagonalSSS{Scalar<:Number} <: SSSFamily{Scalar}
 
         diagonal = DiagonalPart(D)
 
-        n = [size(Di, 1) for Di in diagonal.D]
+        n = [size(Di, 1) for Di ∈ diagonal.D]
         no_blocks = length(diagonal.D)
         N = sum(n)
         off = [0; cumsum(n)]
-        Scalar = eltype(eltype(D))
-        new{Scalar}(diagonal, n, no_blocks, N, off)
+        new{T}(diagonal, n, no_blocks, N, off)
     end
 
 end
@@ -147,15 +146,14 @@ struct SSS{Scalar<:Number} <: AbstractMatrix{Scalar}
         lower = TriangularPart(Q, R, P)
         upper = TriangularPart(U, W, V)
 
-        n = [size(Di, 1) for Di in D]
+        n = [size(Di, 1) for Di ∈ D]
         no_blocks = length(D)
         N = sum(n)
         lower_hankel_ranks = [size(Q[i], 2) for i = 1:no_blocks-1]
         upper_hankel_ranks = [size(U[i], 2) for i = 1:no_blocks-1]
         off = [0; cumsum(n)]
 
-        Scalar = eltype(eltype(D))
-        new{Scalar}(diagonal, lower, upper, n, no_blocks, N, lower_hankel_ranks, upper_hankel_ranks, off)
+        new{T}(diagonal, lower, upper, n, no_blocks, N, lower_hankel_ranks, upper_hankel_ranks, off)
 
     end
 

@@ -4,6 +4,8 @@ module SSSmatrices
 using LinearAlgebra
 using Random
 using SparseArrays
+using BlockDiagonals
+using FFTW
 using Tullio
 
 export greet
@@ -18,7 +20,7 @@ include("getindex.jl")
 include("matrix.jl")
 include("lra.jl")
 include("construction.jl")
-#include("addition.jl")
+include("addition.jl")
 #include("matrixmatrixmultiplication.jl")
 #include("LU.jl")
 #include("ULV.jl")

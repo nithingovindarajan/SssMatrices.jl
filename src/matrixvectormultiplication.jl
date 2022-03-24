@@ -6,6 +6,15 @@ function diagonal_multiply!(B, diagonal::DiagonalPart, X, off::Vector{<:Integer}
 
 end
 
+function diagonal_multiply_adjoint!(B, diagonal::DiagonalPart, X, off::Vector{<:Integer}, no_blocks::Integer)
+
+    for i = 1:no_blocks
+        B[off[i]+1:off[i+1], :] += diagonal.D[i]' * X[off[i]+1:off[i+1], :]
+    end
+
+end
+
+
 function forward_iterate!(B, triang::TriangularPart, X, off::Vector{<:Integer}, no_blocks::Integer)
 
     # forward flow
@@ -34,16 +43,6 @@ function backward_iterate!(B, triang::TriangularPart, X, off::Vector{<:Integer},
 end
 
 
-function SSSmultiply!(B, A::SSS, X)
-
-    # multiply diagonal part
-    diagonal_multiply!(B, A.diagonal, X, A.off, A.no_blocks)
-    # multiply lower triangular part
-    forward_iterate!(B, A.lower, X, A.off, A.no_blocks)
-    # multiply upper triangular part
-    backward_iterate!(B, A.upper, X, A.off, A.no_blocks)
-
-end
 
 function Base.:*(A::SSS, x::AbstractVector)
 
@@ -53,16 +52,38 @@ function Base.:*(A::SSS, x::AbstractVector)
 
     b = zeros(size(A, 1))
 
-    SSSmultiply!(b, A, x)
+    # multiply diagonal part
+    diagonal_multiply!(b, A.diagonal, x, A.off, A.no_blocks)
+    # multiply lower triangular part
+    forward_iterate!(b, A.lower, x, A.off, A.no_blocks)
+    # multiply upper triangular part
+    backward_iterate!(b, A.upper, x, A.off, A.no_blocks)
 
     return b
 
 end
 
 
-
-
 function Base.:*(A::SSS, X::AbstractMatrix)
+
+    # assertions
+    @assert size(A, 2) == size(X, 1) "Matrix vector dimensions not consistent"
+
+    B = zeros(size(A, 1), size(X, 2))
+
+    # multiply diagonal part
+    diagonal_multiply!(B, A.diagonal, X, A.off, A.no_blocks)
+    # multiply lower triangular part
+    forward_iterate!(B, A.lower, X, A.off, A.no_blocks)
+    # multiply upper triangular part
+    backward_iterate!(B, A.upper, X, A.off, A.no_blocks)
+
+    return B
+
+end
+
+
+function Base.:*(A::Adjoint{Scalar,SSS{Scalar}}, X::AbstractMatrix) where {Scalar<:Number}
 
 
     # assertions
@@ -70,8 +91,21 @@ function Base.:*(A::SSS, X::AbstractMatrix)
 
     B = zeros(size(A, 1), size(X, 2))
 
-    SSSmultiply!(B, A, X)
+    # multiply diagonal part
+    diagonal_multiply_adjoint!(B, A.parent.diagonal, X, A.parent.off, A.parent.no_blocks)
+    # multiply lower triangular part
+    forward_iterate!(B, A.parent.upper, X, A.parent.off, A.parent.no_blocks)
+    # multiply upper triangular part
+    backward_iterate!(B, A.parent.lower, X, A.parent.off, A.parent.no_blocks)
 
     return B
 
 end
+
+
+function Base.:*(X::AbstractMatrix, A::Union{SSS,Adjoint{Scalar,SSS{Scalar}}}) where {Scalar<:Number}
+
+    return (A' * X')'
+
+end
+

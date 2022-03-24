@@ -17,6 +17,28 @@ function Δ_2d(n, m)
 end
 
 
+
+function nest(m, n, ndissect=30, lm=m)
+    # https://github.com/mohamed82008/18S096-iap17/blob/master/lecture5/Nested-Dissection.ipynb
+
+    if ndissect <= 0 || m * n < 5
+        return reshape([i + (j - 1) * lm for i = 1:m, j = 1:n], m * n)
+    elseif m >= n
+        msep = div(m, 2)
+        N1 = nest(msep - 1, n, ndissect - 1, lm)
+        N2 = nest(m - msep, n, ndissect - 1, lm) + msep
+        Ns = msep + (0:n-1) * lm
+        return [N1; N2; Ns]
+    else
+        nsep = div(n, 2)
+        N1 = nest(m, nsep - 1, ndissect - 1, lm)
+        N2 = nest(m, n - nsep, ndissect - 1, lm) + nsep * lm
+        Ns = (1:m) + (nsep - 1) * lm
+        return [N1; N2; Ns]
+    end
+end
+
+
 function Δ_2d_nested_dissection(n, m)
 
     return Δ_2d(n, m)
@@ -26,9 +48,7 @@ end
 
 function Δ_1d_schurcompl(n)
 
-    # x'' + 2x = f on [0,1], x(0) = x(1), x'(0) = x'(1)
-    m = 2 * n
-
+    A = Δ_1d(2 * n)
     S = A[1:n, 1:n] - A[1:n, n+1:end] * inv(Matrix(A[n+1:end, n+1:end])) * A[n+1:end, 1:n]
 
     return S

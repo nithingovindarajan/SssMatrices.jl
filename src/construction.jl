@@ -71,17 +71,6 @@ function SSS(A::AbstractMatrix, n::Vector{<:Integer}, threshold::Float64=1E-14)
     Q, R, P = extract_triangularpart(A, n, off, no_blocks, threshold)
     U, W, V = extract_triangularpart(A', n, off, no_blocks, threshold)
 
-    println(" ")
-    for (Di, Pi, Qi) in zip(D, P, Q)
-        print(size(Di, 1))
-        print(" ")
-        print(size(Pi, 1))
-        print(" ")
-        print(size(Qi, 1))
-        println(" ")
-
-    end
-
     return SSS(D, Q, R, P, U, W, V)
 
 end
