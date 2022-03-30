@@ -1,4 +1,4 @@
-function lowrankapprox(B::AbstractArray, threshold::Float64)
+function lowrankapprox(B::AbstractMatrix, threshold::Float64)
 
     # compute SVD
     U, sigma, V = svd(B)

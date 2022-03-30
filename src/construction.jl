@@ -55,7 +55,7 @@ function extract_triangularpart(A::AbstractMatrix, n::Vector{<:Integer}, off::Ve
 end
 
 
-function SSS(A::AbstractMatrix, n::Vector{<:Integer}, threshold::Float64=1E-14)
+function SSS_generators(A::AbstractMatrix, n::Vector{<:Integer}; threshold::Float64=1E-14)
 
 
     # assertions
@@ -71,6 +71,18 @@ function SSS(A::AbstractMatrix, n::Vector{<:Integer}, threshold::Float64=1E-14)
     Q, R, P = extract_triangularpart(A, n, off, no_blocks, threshold)
     U, W, V = extract_triangularpart(A', n, off, no_blocks, threshold)
 
-    return SSS(D, Q, R, P, U, W, V)
+    return (D, Q, R, P, U, W, V, no_blocks, off)
 
 end
+
+
+
+function SSS(A::AbstractMatrix, n::Vector{<:Integer}; threshold::Float64=1E-14)
+    D, Q, R, P, U, W, V, no_blocks, off = SSS_generators(A, n; threshold=threshold)
+    return SSS(D, Q, R, P, U, W, V)
+end
+
+
+
+
+

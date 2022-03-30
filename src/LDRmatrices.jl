@@ -1,62 +1,96 @@
 
 Dminone(n::Int) = Diagonal([(-1.0 + 0im)^(-(k - 1) / n) for k = 1:n])
 OMEGA(n::Int) = [exp(π * 2im * (k - 1) / n) for k = 1:n]
-LAMBDA(n::Int) = exp(π * 1im / n) * OMEGA(n::Int)
+LAMBDA(n::Int) = [exp(π * (2 * (k - 1) + 1) * im / n) for k = 1:n]
+
 
 #------------------------------------------------------------#
 
-export CauchyLike
+export FourierCauchy
 
-
-struct CauchyLike{Scalar<:Number} <: AbstractMatrix{Scalar}
+struct FourierCauchy{Scalar<:Complex{<:AbstractFloat}} <: AbstractMatrix{Scalar}
     n::Integer
-    r::Integer
     omega::Vector{Scalar}
     lambda::Vector{Scalar}
-    R::Matrix{Scalar}
-    S::Matrix{Scalar}
 
-    function CauchyLike{Scalar}(omega, lambda, R, S) where {Scalar<:Number}
 
-        if length(omega) == length(lambda) == size(R, 1) == size(S, 1) && size(R, 2) == size(S, 2)
+    function FourierCauchy{Scalar}(n::Integer) where {Scalar<:Complex{<:AbstractFloat}}
 
-            n = length(omega)
-            r = size(R, 2)
-            new{Scalar}(n, r, convert(Vector{Scalar}, omega), convert(Vector{Scalar}, lambda),
-                convert(Matrix{Scalar}, R), convert(Matrix{Scalar}, S))
+        if n > 0
 
+            omega = convert(Vector{Scalar}, OMEGA(n))
+            lambda = convert(Vector{Scalar}, LAMBDA(n))
+
+            new{Scalar}(n, omega, lambda)
         else
-            DomainError("Provided inputs have incompatible dimensions")
+            DomainError("please provide a positive integer")
         end
 
 
     end
 
 end
-CauchyLike{Scalar}(omega, lambda) where {Scalar<:Number} = CauchyLike{Scalar}(omega, lambda, ones(Scalar, length(omega), 1), ones(Scalar, length(omega), 1))
+FourierCauchy(n::Integer) = FourierCauchy{ComplexF64}(n::Integer)
+Base.:size(A::FourierCauchy) = (A.n, A.n)
+Base.:getindex(A::FourierCauchy, i::Int, j::Int) = 1 / (A.omega[i] - A.lambda[j])
 
-Base.:size(A::CauchyLike) = (A.n, A.n)
-
-function Base.:getindex(A::CauchyLike, i::Int, j::Int)
-
-    if 1 <= i <= A.n && 1 <= j <= A.n
-        return dot(A.S[j, :], A.R[i, :]) / (A.omega[i] - A.lambda[j])
-    else
-        BoundsError()
-    end
-
-end
 
 #------------------------------------------------------------#
 
+export SSS_Cauchy, determine_blocksizes
+
+function determine_blocksizes(n, K)
+
+    size_block = Int(ceil((K * log2(n))))
+    no_blocks, remainder = divrem(n, size_block)
+
+    return [fill(size_block, no_blocks); remainder]
+end
 
 
-# must return the SSS representation of the Cauchy matrix of the Cauchy trick
-function SSS_CauchyLike(Rtilde, Stilde)
+# must return the SSS representation of the Cauchy matrix of the Cauchy trick. Function performance to be improved later...
+function SSS_Cauchy(n; K=1.0, threshold=1E-14)
 
-    n = size(Rtilde, 1)
+    return SSS(FourierCauchy(n), determine_blocksizes(n, K); threshold=threshold)
 
-    return CauchyLike{ComplexF64}(OMEGA(n), LAMBDA(n), Rtilde, Stilde) ## temporary
+end
+
+
+SSS_generators_Cauchy(n; K=1.0, threshold=1E-14) = SSS_generators(FourierCauchy(n), determine_blocksizes(n, K); threshold=threshold)
+
+function sumofrowandcolumnscalings(D, Rtilde, Stilde)
+    @tullio Dnew[i, j] := Rtilde[i, k] * D[i, j] * conj(Stilde[j, k])
+    return Dnew
+end
+
+function SSS_CauchyLike(coeffs, n; K=1.0, threshold=1E-14)
+
+
+    # determine Rtilde and Stilde
+    r = 2
+    Rmat = [1 coeffs[n]; zeros(n - 1) coeffs[1:n-1]+coeffs[n+1:end]]
+    Smat = [coeffs[end:-1:n+1]-coeffs[n-1:-1:1] zeros(n - 1); coeffs[n] 1]
+    Rtilde = sqrt(n) * ifft(Rmat, 1)
+    Stilde = sqrt(n) * ifft((Dminone(n))' * Smat, 1)
+
+
+    D, Q, R, P, U, W, V, no_blocks, off = SSS_generators_Cauchy(n; K=K, threshold=threshold)
+
+
+    D = [sumofrowandcolumnscalings(D[l], view(Rtilde, off[l]+1:off[l+1], :), view(Stilde, off[l]+1:off[l+1], :)) for l ∈ 1:no_blocks]
+
+    Q = [hcat(Tuple(Q[l] .* view(Stilde, off[l]+1:off[l+1], i) for i ∈ 1:r)...) for l ∈ 1:no_blocks]
+    R = [BlockDiagonal([R[l] for i ∈ 1:r]) for l ∈ 1:no_blocks]
+    P = [hcat(Tuple(view(Rtilde, off[l]+1:off[l+1], i) .* P[l] for i ∈ 1:r)...) for l ∈ 1:no_blocks]
+
+    U = [hcat(Tuple(U[l] .* view(Rtilde, off[l]+1:off[l+1], i) for i ∈ 1:r)...) for l ∈ 1:no_blocks]
+    W = [BlockDiagonal([W[l] for i ∈ 1:r]) for l ∈ 1:no_blocks]
+    V = [hcat(Tuple(view(Stilde, off[l]+1:off[l+1], i) .* V[l] for i ∈ 1:r)...) for l ∈ 1:no_blocks]
+
+
+
+
+    return SSS(D, Q, R, P, U, W, V)
 
 
 end
@@ -65,54 +99,30 @@ end
 #------------------------------------------------------------#
 export SquareToeplitz
 
-# determines the corresponding chauchy matrix (in SSS form) of the Toeplitz matrix in SS
-function ToeplitzSSSform(Rtilde, Stilde)
-
-    n = size(Rtilde, 1)
-
-    return CauchyLike{ComplexF64}(OMEGA(n), LAMBDA(n), Rtilde, Stilde) ## temporary
-
-
-end
 
 struct SquareToeplitz{Scalar<:Number} <: AbstractMatrix{Scalar}
 
     coeffs::Vector{Scalar}
     n::Int
-    SSSform::CauchyLike{<:Complex}    # To be replaced with SSS{Scalar} !!!
+    SSSform::AbstractMatrix   # To be replaced with SSS{Scalar} !!!
 
     function SquareToeplitz(coeffs::Vector{T}, n::Integer) where {T<:Number}
         if length(coeffs) == 2 * n - 1
-
-
-            R = [1 coeffs[n]; zeros(n - 1) coeffs[1:n-1]+coeffs[n+1:end]]
-            S = [coeffs[end:-1:n+1]-coeffs[n-1:-1:1] zeros(n - 1); coeffs[n] 1]
-            Rtilde = sqrt(n) * ifft(R, 1)
-            Stilde = sqrt(n) * ifft((Dminone(n))' * S, 1)
-
-
-            new{T}(coeffs, n, SSS_CauchyLike(Rtilde, Stilde))
+            new{T}(coeffs, n, SSS_CauchyLike(coeffs, n))
         else
             DimensionMismatch()
         end
     end
 
 end
-function SquareToeplitz(coeff_lt::Vector, coeff_ut::Vector) where {Scalar<:Number}
+function SquareToeplitz(coeff_lt::Vector, coeff_ut::Vector)
     n = length(coeff_lt)
     coeffs = [reverse(coeff_ut); coeff_lt]
     return SquareToeplitz(coeffs, n)
 end
 Base.:size(A::SquareToeplitz) = (A.n, A.n)
-function Base.:getindex(A::SquareToeplitz, i::Int, j::Int)
+Base.:getindex(A::SquareToeplitz, i::Int, j::Int) = A.coeffs[i-j+A.n]
 
-    if 1 <= i <= A.n && 1 <= j <= A.n
-        return A.coeffs[i-j+A.n]
-    else
-        BoundsError()
-    end
-
-end
 
 
 function Base.:\(A::SquareToeplitz, b::Vector)
@@ -123,10 +133,12 @@ function Base.:\(A::SquareToeplitz, b::Vector)
     else
 
         btilde = sqrt(A.n) * ifft(b)
-        xtilde = \(A.SSSform, btilde)
+        xtilde = \(Matrix(A.SSSform), btilde)
         x = Dminone(A.n) * (1 / sqrt(A.n)) * fft(xtilde)
 
         return x
     end
 
 end
+
+
