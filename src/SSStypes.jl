@@ -127,24 +127,16 @@ struct SSS{Scalar<:Number} <: AbstractMatrix{Scalar}
     upper_hankel_ranks::Vector{Int}
     off::Vector{Int}
 
-    function SSS(
-        D::Vector{<:AbstractMatrix{T}},
-        Q::Vector{<:AbstractMatrix{T}},
-        R::Vector{<:AbstractMatrix{T}},
-        P::Vector{<:AbstractMatrix{T}},
-        U::Vector{<:AbstractMatrix{T}},
-        W::Vector{<:AbstractMatrix{T}},
-        V::Vector{<:AbstractMatrix{T}}) where {T<:Number}
-
+    function SSS{T}(D, Q, R, P, U, W, V) where {T<:Number}
 
         if any([!(size(Di, 1) == size(Qi, 1) == size(Pi, 1) == size(Ui, 1) == size(Vi, 1)) for (Di, Pi, Qi, Ui, Vi) in zip(D, P, Q, U, V)])
             error("dimensions inconsistent.")
         end
 
 
-        diagonal = DiagonalPart(D)
-        lower = TriangularPart(Q, R, P)
-        upper = TriangularPart(U, W, V)
+        diagonal = DiagonalPart(convert(Vector{Matrix{T}}, D))
+        lower = TriangularPart(convert(Vector{Matrix{T}}, Q), convert(Vector{Matrix{T}}, R), convert(Vector{Matrix{T}}, P))
+        upper = TriangularPart(convert(Vector{Matrix{T}}, U), convert(Vector{Matrix{T}}, W), convert(Vector{Matrix{T}}, V))
 
         n = [size(Di, 1) for Di ∈ D]
         no_blocks = length(D)

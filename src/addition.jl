@@ -1,19 +1,19 @@
 
-function add_diagonals_parts(diag1::DiagonalPart, diag2::DiagonalPart)
+function add_diagonals_parts(diag1, diag2)
 
     return [D1i + D2i for (D1i, D2i) ∈ zip(diag1.D, diag2.D)]
 
 
 end
 
-function add_diagonals_parts_adjoint(diag1::DiagonalPart, diag2::DiagonalPart)
+function add_diagonals_parts_adjoint(diag1, diag2)
 
     return [D1i + D2i' for (D1i, D2i) ∈ zip(diag1.D, diag2.D)]
 
 end
 
 
-function add_triangular_parts(triang1::TriangularPart, triang2::TriangularPart)
+function add_triangular_parts(triang1, triang2)
 
     inp = [hcat(inp1i, inp2i) for (inp1i, inp2i) ∈ zip(triang1.inp, triang2.inp)]
     trans = [BlockDiagonal([trans1i, trans2i]) for (trans1i, trans2i) ∈ zip(triang1.trans, triang2.trans)]
@@ -35,7 +35,7 @@ function Base.:+(A::SSS, B::SSS)
     Q, R, P = add_triangular_parts(A.lower, B.lower)
     U, W, V = add_triangular_parts(A.upper, B.upper)
 
-    return SSS(D, Q, R, P, U, W, V)
+    return SSS{Float64}(D, Q, R, P, U, W, V)
 
 end
 
@@ -49,7 +49,7 @@ function Base.:+(A::SSS, B::Adjoint{Scalar,SSS{Scalar}}) where {Scalar<:Number}
     Q, R, P = add_triangular_parts(A.lower, B.parent.upper)
     U, W, V = add_triangular_parts(A.upper, B.parent.lower)
 
-    return SSS(D, Q, R, P, U, W, V)
+    return SSS{Float64}(D, Q, R, P, U, W, V)
 
 end
 Base.:+(A::Adjoint{Scalar,SSS{Scalar}}, B::SSS) where {Scalar<:Number} = Base.:+(B, A)

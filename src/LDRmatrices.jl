@@ -51,7 +51,7 @@ end
 # must return the SSS representation of the Cauchy matrix of the Cauchy trick. Function performance to be improved later...
 function SSS_Cauchy(n; K=1.0, threshold=1E-14)
 
-    return SSS(FourierCauchy(n), determine_blocksizes(n, K); threshold=threshold)
+    return SSS{ComplexF64}(FourierCauchy(n), determine_blocksizes(n, K); threshold=threshold)
 
 end
 

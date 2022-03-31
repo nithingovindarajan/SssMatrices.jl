@@ -2,7 +2,7 @@
 
 export random_SSS
 
-function random_SSS(n::Vector{<:Integer}, ranks_l::Vector{<:Integer}, ranks_u::Vector{<:Integer}, seed=1234)
+function random_SSS(n, ranks_l, ranks_u, seed=1234)
 
     @assert length(n) - 1 == length(ranks_l) == length(ranks_u) "input dimensions not compatible"
 
@@ -27,6 +27,6 @@ function random_SSS(n::Vector{<:Integer}, ranks_l::Vector{<:Integer}, ranks_u::V
     V = [[rand(n[1], 0)]
         [rand(n[i], ranks_u[i-1]) for i = 2:no_blocks]]
 
-    return SSS(D, Q, R, P, U, W, V)
+    return SSS{Float64}(D, Q, R, P, U, W, V)
 
 end

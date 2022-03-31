@@ -1,7 +1,6 @@
-function extract_diagonalpart(A::AbstractMatrix, off::Vector{<:Integer}, no_blocks::Integer)
+function extract_diagonalpart(A, off, no_blocks)
 
-    Scalar = eltype(A)
-    D = Matrix{Scalar}[]
+    D = Matrix[]
     for i = 1:no_blocks
         push!(D, A[off[i]+1:off[i+1], off[i]+1:off[i+1]])
     end
@@ -11,18 +10,18 @@ function extract_diagonalpart(A::AbstractMatrix, off::Vector{<:Integer}, no_bloc
 end
 
 
-function extract_triangularpart(A::AbstractMatrix, n::Vector{<:Integer}, off::Vector{<:Integer}, no_blocks::Integer, threshold)
+function extract_triangularpart(A, n, off, no_blocks, threshold)
 
-    Scalar = eltype(A)
-    inp = Matrix{Scalar}[]
-    trans = Matrix{Scalar}[]
-    out = Matrix{Scalar}[]
+
+    inp = Matrix[]
+    trans = Matrix[]
+    out = Matrix[]
 
 
     # add out_(1)
-    push!(out, zeros(Scalar, n[1], 0))
+    push!(out, zeros(n[1], 0))
     # initialize Hbar
-    Hbar = zeros(Scalar, off[end] - off[2], 0)
+    Hbar = zeros(off[end] - off[2], 0)
 
     for i = 1:no_blocks-1
 
@@ -44,9 +43,9 @@ function extract_triangularpart(A::AbstractMatrix, n::Vector{<:Integer}, off::Ve
 
     end
     # add inp_(N)
-    push!(inp, zeros(Scalar, n[no_blocks], 0))
+    push!(inp, zeros(n[no_blocks], 0))
     # add trans_(N)
-    push!(trans, zeros(Scalar, size(Hbar, 2), 0)')
+    push!(trans, zeros(size(Hbar, 2), 0)')
 
 
     return inp, trans, out
@@ -55,7 +54,7 @@ function extract_triangularpart(A::AbstractMatrix, n::Vector{<:Integer}, off::Ve
 end
 
 
-function SSS_generators(A::AbstractMatrix, n::Vector{<:Integer}; threshold::Float64=1E-14)
+function SSS_generators(A, n; threshold=1E-14)
 
 
     # assertions
@@ -77,9 +76,9 @@ end
 
 
 
-function SSS(A::AbstractMatrix, n::Vector{<:Integer}; threshold::Float64=1E-14)
+function SSS{T}(A::AbstractMatrix, n::Vector{<:Integer}; threshold::Float64=1E-14) where {T<:Number}
     D, Q, R, P, U, W, V, no_blocks, off = SSS_generators(A, n; threshold=threshold)
-    return SSS(D, Q, R, P, U, W, V)
+    return SSS{T}(D, Q, R, P, U, W, V)
 end
 
 

@@ -1,4 +1,4 @@
-function diagonal_multiply!(B, diagonal::DiagonalPart, X, off::Vector{<:Integer}, no_blocks::Integer)
+function diagonal_multiply!(B, diagonal, X, off, no_blocks)
 
     for i = 1:no_blocks
         B[off[i]+1:off[i+1], :] += diagonal.D[i] * X[off[i]+1:off[i+1], :]
@@ -6,7 +6,7 @@ function diagonal_multiply!(B, diagonal::DiagonalPart, X, off::Vector{<:Integer}
 
 end
 
-function diagonal_multiply_adjoint!(B, diagonal::DiagonalPart, X, off::Vector{<:Integer}, no_blocks::Integer)
+function diagonal_multiply_adjoint!(B, diagonal, X, off, no_blocks)
 
     for i = 1:no_blocks
         B[off[i]+1:off[i+1], :] += diagonal.D[i]' * X[off[i]+1:off[i+1], :]
@@ -15,7 +15,7 @@ function diagonal_multiply_adjoint!(B, diagonal::DiagonalPart, X, off::Vector{<:
 end
 
 
-function forward_iterate!(B, triang::TriangularPart, X, off::Vector{<:Integer}, no_blocks::Integer)
+function forward_iterate!(B, triang, X, off, no_blocks)
 
     # forward flow
     H = triang.inp[1]' * X[off[1]+1:off[2], :]
@@ -28,7 +28,7 @@ function forward_iterate!(B, triang::TriangularPart, X, off::Vector{<:Integer}, 
 end
 
 
-function backward_iterate!(B, triang::TriangularPart, X, off::Vector{<:Integer}, no_blocks::Integer)
+function backward_iterate!(B, triang, X, off, no_blocks)
 
 
     # backward flow

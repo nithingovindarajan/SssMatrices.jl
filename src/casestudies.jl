@@ -6,7 +6,7 @@ function Δ_1d(n)
     Js = [1:n; 2:n; 1:n-1]
     Vs = [fill(2, n); fill(-1, 2n - 2)]
 
-    return sparse(Is, Js, Vs)
+    return Matrix(sparse(Is, Js, Vs))
 
 end
 
