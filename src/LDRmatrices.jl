@@ -37,26 +37,29 @@ Base.:getindex(A::FourierCauchy, i::Int, j::Int) = 1 / (A.omega[i] - A.lambda[j]
 
 #------------------------------------------------------------#
 
-export SSS_Cauchy, determine_blocksizes
+export determine_blocksizes_cauchy
 
-function determine_blocksizes(n, K)
+function determine_blocksizes_cauchy(n; K=1.0)
 
     size_block = Int(ceil((K * log2(n))))
     no_blocks, remainder = divrem(n, size_block)
-
-    return [fill(size_block, no_blocks); remainder]
+    if remainder != 0
+        return [fill(size_block, no_blocks); remainder]
+    else
+        return fill(size_block, no_blocks)
+    end
 end
 
 
 # must return the SSS representation of the Cauchy matrix of the Cauchy trick. Function performance to be improved later...
 function SSS_Cauchy(n; K=1.0, threshold=1E-14)
 
-    return SSS{ComplexF64}(FourierCauchy(n), determine_blocksizes(n, K); threshold=threshold)
+    return SSS{ComplexF64}(FourierCauchy(n), determine_blocksizes_cauchy(n; K=K); threshold=threshold)
 
 end
 
 
-SSS_generators_Cauchy(n; K=1.0, threshold=1E-14) = SSS_generators(FourierCauchy(n), determine_blocksizes(n, K); threshold=threshold)
+SSS_generators_Cauchy(n; K=1.0, threshold=1E-14) = SSS_generators(FourierCauchy(n), determine_blocksizes_cauchy(n; K=K); threshold=threshold)
 
 function sumofrowandcolumnscalings(D, Rtilde, Stilde)
     @tullio Dnew[i, j] := Rtilde[i, k] * D[i, j] * conj(Stilde[j, k])
@@ -90,7 +93,7 @@ function SSS_CauchyLike(coeffs, n; K=1.0, threshold=1E-14)
 
 
 
-    return SSS(D, Q, R, P, U, W, V)
+    return SSS{ComplexF64}(D, Q, R, P, U, W, V)
 
 
 end

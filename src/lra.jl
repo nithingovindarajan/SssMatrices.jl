@@ -13,7 +13,7 @@ function lowrankapprox(B::AbstractMatrix, threshold::Float64)
     X = U[:, 1:p]
     Y = V[:, 1:p] * Diagonal(sigma[1:p])
 
-    return X, Y
+    return X, Y, p
 end
 
 
