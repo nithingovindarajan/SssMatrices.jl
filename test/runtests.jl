@@ -26,6 +26,7 @@ greet()
 #     # @test D_SSS.N == N
 #     # @test D_SSS.diagonal.D == D
 
+#     #SSS single block (aka dense matrix)
 
 #     #SSS
 #     no_blocks = 5
@@ -89,51 +90,184 @@ greet()
 # end
 
 
+# # @testset "Doubly Cauchy" begin
+
+# #     k = 1
+# #     A = doubly_cauchy_nest_diss(k)
+# #     m = div(size(A, 1), 2)
+# #     p = numerical_rank(A[1:m, m+1:end], 1E-12)
+# #     println(k, " ", size(A, 1), " ", p)
+
+# #     k = 2
+# #     A = doubly_cauchy_nest_diss(k)
+# #     m = div(size(A, 1), 2)
+# #     p = numerical_rank(A[1:m, m+1:end], 1E-12)
+# #     println(k, " ", size(A, 1), " ", p)
+
+# #     k = 3
+# #     A = doubly_cauchy_nest_diss(k)
+# #     m = div(size(A, 1), 2)
+# #     p = numerical_rank(A[1:m, m+1:end], 1E-12)
+# #     println(k, " ", size(A, 1), " ", p)
+
+# #     k = 4
+# #     A = doubly_cauchy_nest_diss(k)
+# #     m = div(size(A, 1), 2)
+# #     p = numerical_rank(A[1:m, m+1:end], 1E-12)
+# #     println(k, " ", size(A, 1), " ", p)
+
+# #     k = 5
+# #     A = doubly_cauchy_nest_diss(k)
+# #     m = div(size(A, 1), 2)
+# #     p = numerical_rank(A[1:m, m+1:end], 1E-12)
+# #     println(k, " ", size(A, 1), " ", p)
+
+# #     k = 6
+# #     A = doubly_cauchy_nest_diss(k)
+# #     m = div(size(A, 1), 2)
+# #     p = numerical_rank(A[1:m, m+1:end], 1E-12)
+# #     println(k, " ", size(A, 1), " ", p)
 
 
-@testset "Dense to SSS matrix construction" begin
+
+# # end
+
+
+
+# @testset "Dense to SSS matrix construction" begin
+
+#     N = 200
+#     n = [10, 20, 40, 10, 60, 40, 20]
+#     tol = 1E-14
+
+#     # test on randomly generated matrix
+#     A = rand(N, N)
+#     A_SSS = SSS{Float64}(A, n, threshold=1E-13)
+#     rel_err = opnorm(Matrix(A_SSS) - A) / opnorm(A)
+#     @test rel_err < tol
+
+#     # test on 1D Laplacian
+#     A = Δ_1d(N)
+#     A_SSS = SSS{Float64}(A, n, threshold=1E-6)
+#     rel_err = opnorm(Matrix(A_SSS) - A) / opnorm(A)
+#     @test rel_err < tol
+#     @test all(x -> x == 1, A_SSS.lower_hankel_ranks) & all(x -> x == 1, A_SSS.upper_hankel_ranks)
+
+#     # test on schur complement of 1D Laplacian 
+#     A = Δ_1d_schurcompl(N)
+#     A_SSS = SSS{Float64}(A, n, threshold=1E-8)
+#     rel_err = opnorm(Matrix(A_SSS) - A) / opnorm(A)
+#     @test rel_err < tol
+#     @test all(x -> x == 1, A_SSS.lower_hankel_ranks) & all(x -> x == 1, A_SSS.upper_hankel_ranks)
+
+#     # test on semi separable banded matrix
+#     A = semisepbandedmatrix(N)
+#     A_SSS = SSS{Float64}(A, n, threshold=1E-8)
+#     rel_err = opnorm(Matrix(A_SSS) - A) / opnorm(A)
+#     @test rel_err < tol
+#     @test all(x -> x == 1, A_SSS.lower_hankel_ranks) & all(x -> x == 2, A_SSS.upper_hankel_ranks)
+
+#     # # test construction Fourier Cauchy matrix
+#     # A = FourierCauchy{ComplexF64}(N)
+#     # A_SSS = SSS{ComplexF64}(A, determine_blocksizes_cauchy(N; K=3.0); threshold=1E-12)
+#     # rel_err = opnorm(Matrix(A_SSS) - A) / opnorm(A)
+#     # @test rel_err < tol
+
+
+
+
+# end
+
+
+
+@testset "SSS solver" begin
+
+    # 1 by 1 block SSS
+    N = 30
+    A = rand(N, N)
+    x = rand(N)
+    A_SSS = SSS{Float64}(A, [N], threshold=1E-13)
+    @test A \ x ≈ A_SSS \ x
+
+
+    # 2 by 2 block SSS
+    no_blocks = 2
+    n = [5, 4]
+    ranks_l = [2]
+    ranks_u = [1]
+
+    A_SSS = random_SSS(n, ranks_l, ranks_u)
+    A = Matrix(A_SSS)
+    c = rand(A_SSS.N)
+    @test A \ c ≈ A_SSS \ c
+
+
+
+    # 3 by 3 block SSS
+    no_blocks = 3
+    n = [5, 5, 4]
+    ranks_l = [2, 2]
+    ranks_u = [1, 2]
+
+    A_SSS = random_SSS(n, ranks_l, ranks_u)
+    A = Matrix(A_SSS)
+    c = rand(A_SSS.N)
+    @test A \ c ≈ A_SSS \ c
+
+
+    # 4 by 4 block SSS
+    no_blocks = 4
+    n = [5, 3, 4, 5]
+    ranks_l = [2, 1, 3]
+    ranks_u = [1, 3, 2]
+
+    A_SSS = random_SSS(n, ranks_l, ranks_u)
+    A = Matrix(A_SSS)
+    c = rand(A_SSS.N)
+
+
+    @test A \ c ≈ A_SSS \ c
+
+
+    # 8 by 8 block SSS
+    no_blocks = 8
+    n = [5, 3, 4, 5, 5, 5, 5, 5]
+    ranks_l = [2, 1, 3, 2, 2, 1, 2]
+    ranks_u = [1, 1, 2, 3, 2, 1, 2]
+
+    A_SSS = random_SSS(n, ranks_l, ranks_u)
+    A = Matrix(A_SSS)
+    c = rand(A_SSS.N)
+
+
+    @test A \ c ≈ A_SSS \ c
+
+
+    # 10 by 10 block SSS
+    no_blocks = 10
+    n = [5, 3, 4, 5, 5, 5, 5, 5, 7, 6]
+    ranks_l = [2, 1, 3, 2, 2, 1, 2, 3, 4]
+    ranks_u = [1, 1, 2, 3, 2, 1, 2, 3, 4]
+
+    A_SSS = random_SSS(n, ranks_l, ranks_u)
+    A = Matrix(A_SSS)
+    c = rand(A_SSS.N)
+
+
+    @test A \ c ≈ A_SSS \ c
 
     N = 200
     n = [10, 20, 40, 10, 60, 40, 20]
-    tol = 1E-14
+    A = Δ_1d_schurcompl(N)
+    A_SSS = SSS{Float64}(A, n, threshold=1E-8)
+    c = rand(N)
 
-    # # test on randomly generated matrix
-    # A = rand(N, N)
-    # A_SSS = SSS{Float64}(A, n, threshold=1E-13)
-    # rel_err = opnorm(Matrix(A_SSS) - A) / opnorm(A)
-    # @test rel_err < tol
-
-    # # test on 1D Laplacian
-    # A = Δ_1d(N)
-    # A_SSS = SSS{Float64}(A, n, threshold=1E-6)
-    # rel_err = opnorm(Matrix(A_SSS) - A) / opnorm(A)
-    # @test rel_err < tol
-    # @test all(x -> x == 1, A_SSS.lower_hankel_ranks) & all(x -> x == 1, A_SSS.upper_hankel_ranks)
-
-    # # test on schur complement of 1D Laplacian 
-    # A = Δ_1d_schurcompl(N)
-    # A_SSS = SSS{Float64}(A, n, threshold=1E-8)
-    # rel_err = opnorm(Matrix(A_SSS) - A) / opnorm(A)
-    # @test rel_err < tol
-    # @test all(x -> x == 1, A_SSS.lower_hankel_ranks) & all(x -> x == 1, A_SSS.upper_hankel_ranks)
-
-    # # test on semi separable banded matrix
-    # A = semisepbandedmatrix(N)
-    # A_SSS = SSS{Float64}(A, n, threshold=1E-8)
-    # rel_err = opnorm(Matrix(A_SSS) - A) / opnorm(A)
-    # @test rel_err < tol
-    # @test all(x -> x == 1, A_SSS.lower_hankel_ranks) & all(x -> x == 2, A_SSS.upper_hankel_ranks)
-
-    # test construction Fourier Cauchy matrix
-    A = FourierCauchy{ComplexF64}(N)
-    A_SSS = SSS{ComplexF64}(A, determine_blocksizes_cauchy(N; K=3.0); threshold=1E-12)
-    rel_err = opnorm(Matrix(A_SSS) - A) / opnorm(A)
-    @test rel_err < tol
-
+    @test A \ c ≈ A_SSS \ c
 
 
 
 end
+
 
 
 

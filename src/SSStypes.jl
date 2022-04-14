@@ -127,6 +127,7 @@ struct SSS{Scalar<:Number} <: AbstractMatrix{Scalar}
     upper_hankel_ranks::Vector{Int}
     off::Vector{Int}
 
+
     function SSS{T}(D, Q, R, P, U, W, V) where {T<:Number}
 
         if any([!(size(Di, 1) == size(Qi, 1) == size(Pi, 1) == size(Ui, 1) == size(Vi, 1)) for (Di, Pi, Qi, Ui, Vi) in zip(D, P, Q, U, V)])
@@ -141,9 +142,10 @@ struct SSS{Scalar<:Number} <: AbstractMatrix{Scalar}
         n = [size(Di, 1) for Di ∈ D]
         no_blocks = length(D)
         N = sum(n)
-        lower_hankel_ranks = [size(Q[i], 2) for i = 1:no_blocks-1]
-        upper_hankel_ranks = [size(U[i], 2) for i = 1:no_blocks-1]
+        lower_hankel_ranks = [size(Q[i], 2) for i = 1:no_blocks]
+        upper_hankel_ranks = [size(V[i], 2) for i = 1:no_blocks]
         off = [0; cumsum(n)]
+
 
         new{T}(diagonal, lower, upper, n, no_blocks, N, lower_hankel_ranks, upper_hankel_ranks, off)
 

@@ -40,28 +40,28 @@ function extract_triangularpart(A, n, off, no_blocks, threshold)
         push!(out, X[1:n[i+1], :])
 
 
-        if i == 2
-            Z = [inp[1]' zeros(size(inp[1], 2), n[2]); zeros(n[2], n[1]) Matrix(I, n[2], n[2])]
-            println("---- Hankel block 1 ----")
-            println("Htilde * Z == Hankelblock: ", Htilde * Z ≈ A[off[3]+1:end, 1:off[3]])
-            println("numerical rank of Htilde: ", p)
-            _, _, pcheck = lowrankapprox(Z, threshold)
-            println("Z has full numerical row rank: ", pcheck == size(Z, 1))
-            _, _, pcheck2 = lowrankapprox(A[off[3]+1:end, 1:off[3]], threshold)
-            println("numerical rank of Hankelblock: ", pcheck2)
-        elseif i == 3
+        # if i == 2
+        #     Z = [inp[1]' zeros(size(inp[1], 2), n[2]); zeros(n[2], n[1]) Matrix(I, n[2], n[2])]
+        #     println("---- Hankel block 1 ----")
+        #     println("Htilde * Z == Hankelblock: ", Htilde * Z ≈ A[off[3]+1:end, 1:off[3]])
+        #     println("numerical rank of Htilde: ", p)
+        #     _, _, pcheck = lowrankapprox(Z, threshold)
+        #     println("Z has full numerical row rank: ", pcheck == size(Z, 1))
+        #     _, _, pcheck2 = lowrankapprox(A[off[3]+1:end, 1:off[3]], threshold)
+        #     println("numerical rank of Hankelblock: ", pcheck2)
+        # elseif i == 3
 
-            Z = [[trans[2] * inp[1]' inp[2]'] zeros(size(inp[2], 2), n[3]); zeros(n[3], n[1] + n[2]) Matrix(I, n[3], n[3])]
-            println("---- Hankel block 2 ----")
-            println("Htilde * Z == Hankelblock: ", Htilde * Z ≈ A[off[4]+1:end, 1:off[4]])
-            println("numerical rank of Htilde: ", p)
-            _, _, pcheck = lowrankapprox(Z, threshold)
-            println("Z has full numerical row rank: ", pcheck == size(Z, 1))
-            _, _, pcheck2 = lowrankapprox(A[off[3]+1:end, 1:off[3]], threshold)
-            println("numerical rank of Hankelblock: ", pcheck2)
+        #     Z = [[trans[2] * inp[1]' inp[2]'] zeros(size(inp[2], 2), n[3]); zeros(n[3], n[1] + n[2]) Matrix(I, n[3], n[3])]
+        #     println("---- Hankel block 2 ----")
+        #     println("Htilde * Z == Hankelblock: ", Htilde * Z ≈ A[off[4]+1:end, 1:off[4]])
+        #     println("numerical rank of Htilde: ", p)
+        #     _, _, pcheck = lowrankapprox(Z, threshold)
+        #     println("Z has full numerical row rank: ", pcheck == size(Z, 1))
+        #     _, _, pcheck2 = lowrankapprox(A[off[3]+1:end, 1:off[3]], threshold)
+        #     println("numerical rank of Hankelblock: ", pcheck2)
 
 
-        end
+        # end
 
         # determine next Hbar
         Hbar = X[n[i+1]+1:end, :]

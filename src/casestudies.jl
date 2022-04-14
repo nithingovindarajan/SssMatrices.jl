@@ -1,4 +1,4 @@
-export Δ_1d, Δ_2d, Δ_2d_nested_dissection, Δ_1d_schurcompl, semisepbandedmatrix, cauchyish
+export Δ_1d, Δ_2d, Δ_2d_nested_dissection, Δ_1d_schurcompl, semisepbandedmatrix, cauchyish, doubly_cauchy_nest_diss
 
 function Δ_1d(n)
 
@@ -18,25 +18,37 @@ end
 
 
 
-function nest(m, n, ndissect=30, lm=m)
-    # https://github.com/mohamed82008/18S096-iap17/blob/master/lecture5/Nested-Dissection.ipynb
+function nest_diss_no_sep(off_x, off_y, m, n, M, N; threshold=2)
 
-    if ndissect <= 0 || m * n < 5
-        return reshape([i + (j - 1) * lm for i = 1:m, j = 1:n], m * n)
+    if max(m, n) < threshold
+        return [(off_x - 1 + i) + (off_y - 2 + j) * M for j = 1:n for i = 1:m]   # CartesianIndex(off_x - 1 + i, off_y - 1 + j)
     elseif m >= n
         msep = div(m, 2)
-        N1 = nest(msep - 1, n, ndissect - 1, lm)
-        N2 = nest(m - msep, n, ndissect - 1, lm) + msep
-        Ns = msep + (0:n-1) * lm
-        return [N1; N2; Ns]
+        N1 = nest_diss_no_sep(off_x, off_y, msep, n, M, N)
+        N2 = nest_diss_no_sep(off_x + msep, off_y, m - msep, n, M, N)
+        return [N1; N2]
     else
         nsep = div(n, 2)
-        N1 = nest(m, nsep - 1, ndissect - 1, lm)
-        N2 = nest(m, n - nsep, ndissect - 1, lm) + nsep * lm
-        Ns = (1:m) + (nsep - 1) * lm
-        return [N1; N2; Ns]
+        N1 = nest_diss_no_sep(off_x, off_y, m, nsep, M, N)
+        N2 = nest_diss_no_sep(off_x, off_y + nsep, m, n - nsep, M, N)
+        return [N1; N2]
     end
 end
+nest_diss_no_sep(M, N; threshold=2) = nest_diss_no_sep(1, 1, M, N, M, N; threshold=threshold)
+nest_diss_no_sep(M; threshold=2) = nest_diss_no_sep(M, M; threshold=threshold)
+
+
+function doubly_cauchy_nest_diss(k)
+
+    n = 2^k
+    a = nest_diss_no_sep(n)
+    A = FourierCauchy(n)
+    A = kron(A, A)
+
+    return A[a, a]
+
+end
+
 
 
 function Δ_2d_nested_dissection(n, m)

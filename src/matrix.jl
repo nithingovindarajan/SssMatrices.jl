@@ -1,4 +1,4 @@
-function diagonalfill!(Adense, diagonal::DiagonalPart, off::Vector{<:Integer}, no_blocks::Integer)
+function diagonalfill!(Adense, diagonal, off, no_blocks)
 
     for i = 1:no_blocks
         Adense[off[i]+1:off[i+1], off[i]+1:off[i+1]] = diagonal.D[i]
@@ -7,7 +7,7 @@ function diagonalfill!(Adense, diagonal::DiagonalPart, off::Vector{<:Integer}, n
 end
 
 
-function triangularfill!(Adense, triang::TriangularPart, off::Vector{<:Integer}, no_blocks::Integer)
+function triangularfill!(Adense, triang, off, no_blocks)
 
     for j = 1:no_blocks
 

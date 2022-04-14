@@ -1,131 +1,214 @@
+export forwarditerate
 
-function Base.:\(A::SSS, b::Vector)
+SchurComplements = Vector{Matrix}
 
+function diagblock(A, k)
 
-    N_sparse = sum(A.Gpi) + sum(A.Hpi) + sum(A.n)
-
-    Blocksizes = Int64[]
-    vecsizes = Array{Int64}(undef, A.N, 3)
-    for i = 1:A.N
-        if i == 1
-            vecsizes[i, :] = [A.n[i] 0 A.Gpi[i]]
-            append!(Blocksizes, A.n[i] + A.Gpi[i])
-        elseif i == A.N
-            vecsizes[i, :] = [A.n[i] A.Hpi[i-1] 0]
-            append!(Blocksizes, A.n[i] + A.Hpi[i-1])
-        else
-            vecsizes[i, :] = [A.n[i] A.Hpi[i-1] A.Gpi[i]]
-            append!(Blocksizes, A.n[i] + A.Gpi[i] + A.Hpi[i-1])
-        end
-    end
-
-    Indices = pushfirst!(cumsum(Blocksizes), 0)
-    pop!(Indices)
-
-    #### ----------------------------------- ####
-    #### ----  construct sparse vector  ---- ####
-    #### ----------------------------------- ####
-
-
-    I = Int64[]
-    for i = 1:A.N
-        append!(I, collect((Indices[i]+1):(Indices[i]+A.n[i])))
-    end
-
-    b_sparse = sparsevec(I, b, N_sparse)
-
-
-
-    #### ----------------------------------- ####
-    #### ----  construct sparse matrix  ---- ####
-    #### ----------------------------------- ####
-
-    I = Int64[]
-    J = Int64[]
-    V = Float64[]
-    # add the A's
-    for i = 1:A.N
-
-        if i == 1
-            Ak = [A.Di[i] zeros(vecsizes[i, 1], vecsizes[i, 2]) zeros(vecsizes[i, 1], vecsizes[i, 3])
-                zeros(vecsizes[i, 2], vecsizes[i, 1]) -eye(vecsizes[i, 2]) zeros(vecsizes[i, 2], vecsizes[i, 3])
-                transpose(A.Qi[i]) zeros(vecsizes[i, 3], vecsizes[i, 2]) -eye(vecsizes[i, 3])]
-            Itemp, Jtemp, Vtemp = findnz(sparse(Ak))
-        elseif i == A.N
-            Ak = [A.Di[A.N] zeros(vecsizes[i, 1], vecsizes[i, 2]) zeros(vecsizes[i, 1], vecsizes[i, 3])
-                transpose(A.Vi[A.N-1]) -eye(vecsizes[i, 2]) zeros(vecsizes[i, 2], vecsizes[i, 3])
-                zeros(vecsizes[i, 3], vecsizes[i, 1]) zeros(vecsizes[i, 3], vecsizes[i, 2]) -eye(vecsizes[i, 3])]
-            Itemp, Jtemp, Vtemp = findnz(sparse(Ak))
-        else
-            Ak = [A.Di[i] zeros(vecsizes[i, 1], vecsizes[i, 2]) zeros(vecsizes[i, 1], vecsizes[i, 3])
-                transpose(A.Vi[i-1]) -eye(vecsizes[i, 2]) zeros(vecsizes[i, 2], vecsizes[i, 3])
-                transpose(A.Qi[i]) zeros(vecsizes[i, 3], vecsizes[i, 2]) -eye(vecsizes[i, 3])]
-            Itemp, Jtemp, Vtemp = findnz(sparse(Ak))
-        end
-
-        append!(I, Indices[i] .+ Itemp)
-        append!(J, Indices[i] .+ Jtemp)
-        append!(V, Vtemp)
-
-
-    end
-
-
-    # add the B's
-    for i = 2:A.N
-        if i == A.N
-            Bk = [zeros(vecsizes[i, 1], vecsizes[i-1, 1]) zeros(vecsizes[i, 1], vecsizes[i-1, 2]) A.Pi[i-1]
-                zeros(vecsizes[i, 2], vecsizes[i-1, 1]) zeros(vecsizes[i, 2], vecsizes[i-1, 2]) zeros(vecsizes[i, 2], vecsizes[i-1, 3])
-                zeros(vecsizes[i, 3], vecsizes[i-1, 1]) zeros(vecsizes[i, 3], vecsizes[i-1, 2]) zeros(vecsizes[i, 3], vecsizes[i-1, 3])]
-            Itemp, Jtemp, Vtemp = findnz(sparse(Bk))
-        else
-            Bk = [zeros(vecsizes[i, 1], vecsizes[i-1, 1]) zeros(vecsizes[i, 1], vecsizes[i-1, 2]) A.Pi[i-1]
-                zeros(vecsizes[i, 2], vecsizes[i-1, 1]) zeros(vecsizes[i, 2], vecsizes[i-1, 2]) zeros(vecsizes[i, 2], vecsizes[i-1, 3])
-                zeros(vecsizes[i, 3], vecsizes[i-1, 1]) zeros(vecsizes[i, 3], vecsizes[i-1, 2]) A.Ri[i-1]]
-            Itemp, Jtemp, Vtemp = findnz(sparse(Bk))
-        end
-
-        append!(I, Indices[i] .+ Itemp)
-        append!(J, Indices[i-1] .+ Jtemp)
-        append!(V, Vtemp)
-
-
-    end
-
-    # add the C's
-    for i = 2:A.N
-        if i == 2
-            Ck = [zeros(vecsizes[i-1, 1], vecsizes[i, 1]) A.Ui[i-1] zeros(vecsizes[i-1, 1], vecsizes[i, 3])
-                zeros(vecsizes[i-1, 2], vecsizes[i, 1]) zeros(vecsizes[i-1, 2], vecsizes[i, 2]) zeros(vecsizes[i-1, 2], vecsizes[i, 3])
-                zeros(vecsizes[i-1, 3], vecsizes[i, 1]) zeros(vecsizes[i-1, 3], vecsizes[i, 2]) zeros(vecsizes[i-1, 3], vecsizes[i, 3])]
-            Itemp, Jtemp, Vtemp = findnz(sparse(Ck))
-        else
-            Ck = [zeros(vecsizes[i-1, 1], vecsizes[i, 1]) A.Ui[i-1] zeros(vecsizes[i-1, 1], vecsizes[i, 3])
-                zeros(vecsizes[i-1, 2], vecsizes[i, 1]) A.Wi[i-2] zeros(vecsizes[i-1, 2], vecsizes[i, 3])
-                zeros(vecsizes[i-1, 3], vecsizes[i, 1]) zeros(vecsizes[i-1, 3], vecsizes[i, 2]) zeros(vecsizes[i-1, 3], vecsizes[i, 3])]
-            Itemp, Jtemp, Vtemp = findnz(sparse(Ck))
-        end
-
-        append!(I, Indices[i-1] .+ Itemp)
-        append!(J, Indices[i] .+ Jtemp)
-        append!(V, Vtemp)
-
-
-    end
-
-    A_sparse = sparse(I, J, V, N_sparse, N_sparse)
-
-    #### ------------------------------- ####
-    #### ----  solve sparse system  ---- ####
-    #### ------------------------------- ####
-
-    x_sparse = qr(A_sparse) \ Vector(b_sparse)
-
-    x = Float64[]
-    for i = 1:A.N
-        append!(x, x_sparse[(Indices[i]+1):(Indices[i]+A.n[i])])
-    end
-
-    return x
+    return [Matrix(I, size(A.upper.out[k], 2), size(A.upper.out[k], 2)) zeros(size(A.upper.out[k], 2), size(A.lower.inp[k], 2)) -A.upper.out[k]'
+        zeros(size(A.lower.inp[k], 2), size(A.upper.out[k], 2)) Matrix(I, size(A.lower.inp[k], 2), size(A.lower.inp[k], 2)) -A.lower.inp[k]'
+        zeros(A.n[k], size(A.upper.out[k], 2)) zeros(A.n[k], size(A.lower.inp[k], 2)) A.diagonal.D[k]]
 
 end
+
+function supdiagblock(A, k)
+    return [-A.upper.trans[k-1]' zeros(size(A.upper.out[k-1], 2), size(A.lower.inp[k], 2)) zeros(size(A.upper.out[k-1], 2), A.n[k])
+        zeros(size(A.lower.inp[k-1], 2), size(A.upper.inp[k-1], 2)) zeros(size(A.lower.inp[k-1], 2), size(A.lower.inp[k], 2)) zeros(size(A.lower.inp[k-1], 2), A.n[k])
+        A.upper.inp[k-1] zeros(A.n[k-1], size(A.lower.inp[k], 2)) zeros(A.n[k-1], A.n[k])]
+end
+
+function subdiagblock(A, k)
+    return [zeros(size(A.upper.out[k], 2), size(A.upper.out[k-1], 2)) zeros(size(A.upper.out[k], 2), size(A.lower.out[k], 2)) zeros(size(A.upper.out[k], 2), A.n[k-1])
+        zeros(size(A.lower.inp[k], 2), size(A.upper.out[k-1], 2)) -A.lower.trans[k] zeros(size(A.lower.inp[k], 2), A.n[k-1])
+        zeros(A.n[k], size(A.upper.out[k-1], 2)) A.lower.out[k] zeros(A.n[k], A.n[k-1])]
+
+end
+
+
+function schurcomplement(A11, A12, A21, A22)
+
+    return A22 - A21 * (A11 \ A12)
+
+end
+
+
+function compute_schurcomplements(A)
+
+    S = SchurComplements(undef, A.no_blocks)
+
+    S[1] = diagblock(A, 1)
+
+    for k = 2:A.no_blocks
+
+        S[k] = schurcomplement(S[k-1], supdiagblock(A, k), subdiagblock(A, k), diagblock(A, k))
+
+    end
+
+    return S
+
+end
+
+
+function forwarditerate(A, S, c)
+
+    x_lift = Vector{Vector}(undef, A.no_blocks)
+
+    x_lift[1] = [zeros(A.upper_hankel_ranks[1]); zeros(A.lower_hankel_ranks[1]); c[A.off[1]+1:A.off[2]]]
+
+    for k = 2:A.no_blocks
+
+        c_lift = [zeros(A.upper_hankel_ranks[k])
+            zeros(A.lower_hankel_ranks[k])
+            c[A.off[k]+1:A.off[k+1]]]
+
+
+        x_lift[k] = c_lift - subdiagblock(A, k) * (S[k-1] \ x_lift[k-1])
+
+    end
+
+
+    return x_lift
+
+end
+
+
+
+function backwarditerate!(x_lift, A, S)
+
+
+    x_lift[A.no_blocks] = S[A.no_blocks] \ x_lift[A.no_blocks]
+
+    for k = A.no_blocks:-1:2
+
+        x_lift[k-1] = S[k-1] \ (x_lift[k-1] - supdiagblock(A, k) * x_lift[k])
+
+    end
+
+
+end
+
+
+
+function Base.:\(A::SSS, c::Vector)
+
+
+
+    if A.no_blocks == 1
+        return A.diagonal.D[1] \ c
+    else
+
+        # note: D^-1 is computed twice. It might be good to save the QR / LU of Di in memory?
+        S = compute_schurcomplements(A)
+        x_lift = forwarditerate(A, S, c)
+        t = deepcopy(x_lift)
+        backwarditerate!(x_lift, A, S)
+
+        x = reduce(vcat, (x_lift[i][A.upper_hankel_ranks[i]+A.lower_hankel_ranks[i]+1:end] for i = 1:A.no_blocks))
+
+        return x
+
+    end
+
+end
+
+
+# function Base.:\(A::SSS, S::SchurComplements, c::Vector)
+
+
+
+#     if A.no_blocks == 1
+#         return A.diagonal.D[1] \ c
+#     else
+
+
+#         x_lift = forwarditerate(A, S, c)
+#         backwarditerate!(x_lift, A, S)
+
+#         return x
+
+#     end
+
+# end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Experiment
+
+# generators
+n = 4
+r = 2
+D1, D2, D3 = rand(n, n), rand(n, n), rand(n, n)
+Q1, Q2, Q3 = rand(n, r), rand(n, 2), rand(n, 0)
+R1, R2, R3 = rand(r, 0), rand(r, r), rand(0, r)
+P1, P2, P3 = rand(n, 0), rand(n, r), rand(n, r)
+U1, U2, U3 = rand(n, r), rand(n, r), rand(n, 0)
+W1, W2, W3 = rand(0, r), rand(r, r), rand(r, 0)
+V1, V2, V3 = rand(n, 0), rand(n, r), rand(n, r)
+
+# right hand side
+c1, c2, c3 = rand(n), rand(n), rand(n)
+
+# The SSS matrix
+A_SSS = [D1 U1*V2' U1*W2*V3'
+    P2*Q1' D2 U2*V3'
+    P3*R2*Q1' P3*Q2' D3]
+
+A11 = [Matrix(I, 0, 0) zeros(0, r) -V1'
+    zeros(r, 0) Matrix(I, r, r) -Q1'
+    zeros(n, 0) zeros(n, r) D1]
+
+
+A21 = [zeros(r, 0) zeros(r, r) zeros(r, n)
+    zeros(r, 0) -R2 zeros(r, n)
+    zeros(n, 0) P2 zeros(n, n)]
+
+A31 = [zeros(r, 0) zeros(r, r) zeros(r, n)
+    zeros(0, 0) zeros(0, r) zeros(0, n)
+    zeros(n, 0) zeros(n, r) zeros(n, n)]
+
+A12 = [-W1 zeros(0, 2) zeros(0, n)
+    zeros(r, r) zeros(r, 2) zeros(2, n)
+    U1 zeros(n, 2) zeros(n, n)]
+
+A22 = [Matrix(I, r, r) zeros(r, r) -V2'
+    zeros(r, r) Matrix(I, r, r) -Q2'
+    zeros(n, r) zeros(n, r) D2]
+
+A32 = [zeros(r, r) zeros(r, r) zeros(r, n)
+    zeros(0, r) -R3 zeros(0, n)
+    zeros(n, r) P3 zeros(n, n)]
+
+A13 = [zeros(0, r) zeros(0, 0) zeros(0, n)
+    zeros(r, r) zeros(r, 0) zeros(r, n)
+    zeros(n, r) zeros(n, 0) zeros(n, n)]
+
+A23 = [-W2 zeros(r, 0) zeros(r, n)
+    zeros(r, r) zeros(r, 0) zeros(r, n)
+    U2 zeros(n, 0) zeros(n, n)]
+
+A33 = [Matrix(I, r, r) zeros(r, 0) -V3'
+    zeros(0, r) Matrix(I, 0, 0) -Q3'
+    zeros(n, r) zeros(n, 0) D3]
+
+
+Asparse = [A11 A12 A13
+    A21 A22 A23
+    A31 A32 A33]
+
+
+#test if embedding is constructed properly
+x_ref = A_SSS \ [c1; c2; c3]
+largevec = Asparse \ [zeros(0); zeros(r); c1; zeros(r); zeros(r); c2; zeros(r); zeros(0); c3]
+x = [largevec[(0+r+1):(0+r+n)]; largevec[(0+r+n+r+r+1):(0+r+n+r+r+n)]; largevec[(0+r+n+r+n+r+r+0+1):end]]
+x ≈ x_ref
+

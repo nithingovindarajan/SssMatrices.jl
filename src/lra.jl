@@ -1,3 +1,21 @@
+export lowrankapprox, numerical_rank
+
+
+function numerical_rank(B::AbstractMatrix, threshold::Float64)
+
+    # compute SVD
+    U, sigma, V = svd(B)
+
+    # rank
+    p = findlast(x -> x > sigma[1] * threshold, sigma)
+    if p == nothing
+        p = 0
+    end
+
+    return p
+end
+
+
 function lowrankapprox(B::AbstractMatrix, threshold::Float64)
 
     # compute SVD
