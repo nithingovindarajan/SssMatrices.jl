@@ -254,15 +254,27 @@ greet()
     c = rand(A_SSS.N)
 
 
+    # 
     @test A \ c ≈ A_SSS \ c
 
     N = 200
     n = [10, 20, 40, 10, 60, 40, 20]
     A = Δ_1d_schurcompl(N)
-    A_SSS = SSS{Float64}(A, n, threshold=1E-8)
+    A_SSS = SSS{Float64}(A, n)
     c = rand(N)
 
     @test A \ c ≈ A_SSS \ c
+
+
+    # FourierCauchy
+    N = 200
+    A = FourierCauchy{ComplexF64}(N)
+    A_SSS = SSS{ComplexF64}(A, determine_blocksizes_cauchy(N; K=3.0); threshold=1E-12)
+    c = rand(N)
+
+    @test Matrix(A_SSS) ≈ A
+    @test A \ c ≈ A_SSS \ c
+
 
 
 
