@@ -125,7 +125,14 @@ struct SSS{Scalar<:Number} <: AbstractMatrix{Scalar}
     N::Int
     lower_hankel_ranks::Vector{Int}
     upper_hankel_ranks::Vector{Int}
+    tot_ranks_upper::Int
+    tot_ranks_lower::Int
     off::Vector{Int}
+    off_upper::Vector{Int}
+    off_lower::Vector{Int}
+    block::Vector{UnitRange}
+    rblock_upper::Vector{UnitRange}
+    rblock_lower::Vector{UnitRange}
 
 
     function SSS{T}(D, Q, R, P, U, W, V) where {T<:Number}
@@ -144,10 +151,18 @@ struct SSS{Scalar<:Number} <: AbstractMatrix{Scalar}
         N = sum(n)
         lower_hankel_ranks = [size(Q[i], 2) for i = 1:no_blocks]
         upper_hankel_ranks = [size(V[i], 2) for i = 1:no_blocks]
+        tot_ranks_upper = sum(upper_hankel_ranks)
+        tot_ranks_lower = sum(lower_hankel_ranks)
         off = [0; cumsum(n)]
+        off_upper = [0; cumsum(upper_hankel_ranks)]
+        off_lower = [0; cumsum(lower_hankel_ranks)]
+        block = [off[i]+1:off[i+1] for i = 1:no_blocks]
+        rblock_upper = [off_upper[i]+1:off_upper[i+1] for i = 1:no_blocks]
+        rblock_lower = [off_lower[i]+1:off_lower[i+1] for i = 1:no_blocks]
 
-
-        new{T}(diagonal, lower, upper, n, no_blocks, N, lower_hankel_ranks, upper_hankel_ranks, off)
+        new{T}(diagonal, lower, upper, n, no_blocks, N, lower_hankel_ranks,
+            upper_hankel_ranks, tot_ranks_upper, tot_ranks_lower, off,
+            off_upper, off_lower, block, rblock_upper, rblock_lower)
 
     end
 

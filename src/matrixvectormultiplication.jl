@@ -1,43 +1,43 @@
-function diagonal_multiply!(B, diagonal, X, off, no_blocks)
+function diagonal_multiply!(B, diagonal, X, block, no_blocks)
 
     for i = 1:no_blocks
-        B[off[i]+1:off[i+1], :] += diagonal.D[i] * X[off[i]+1:off[i+1], :]
+        B[block[i], :] += diagonal.D[i] * X[block[i], :]
     end
 
 end
 
-function diagonal_multiply_adjoint!(B, diagonal, X, off, no_blocks)
+function diagonal_multiply_adjoint!(B, diagonal, X, block, no_blocks)
 
     for i = 1:no_blocks
-        B[off[i]+1:off[i+1], :] += diagonal.D[i]' * X[off[i]+1:off[i+1], :]
+        B[block[i], :] += diagonal.D[i]' * X[block[i], :]
     end
 
 end
 
 
-function forward_iterate!(B, triang, X, off, no_blocks)
+function forward_iterate!(B, triang, X, block, no_blocks)
 
     # forward flow
-    H = triang.inp[1]' * X[off[1]+1:off[2], :]
+    H = triang.inp[1]' * X[block[1], :]
     for i = 2:no_blocks-1
-        B[off[i]+1:off[i+1], :] += triang.out[i] * H
-        H = triang.trans[i] * H + triang.inp[i]' * X[off[i]+1:off[i+1], :]
+        B[block[i], :] += triang.out[i] * H
+        H = triang.trans[i] * H + triang.inp[i]' * X[block[i], :]
     end
-    B[off[no_blocks]+1:off[no_blocks+1], :] += triang.out[no_blocks] * H
+    B[block[no_blocks], :] += triang.out[no_blocks] * H
 
 end
 
 
-function backward_iterate!(B, triang, X, off, no_blocks)
+function backward_iterate!(B, triang, X, block, no_blocks)
 
 
     # backward flow
-    G = triang.out[no_blocks]' * X[off[no_blocks]+1:off[no_blocks+1], :]
+    G = triang.out[no_blocks]' * X[block[no_blocks], :]
     for i = no_blocks-1:-1:2
-        B[off[i]+1:off[i+1], :] += triang.inp[i] * G
-        G = triang.trans[i]' * G + triang.out[i]' * X[off[i]+1:off[i+1], :]
+        B[block[i], :] += triang.inp[i] * G
+        G = triang.trans[i]' * G + triang.out[i]' * X[block[i], :]
     end
-    B[off[1]+1:off[2], :] += triang.inp[1] * G
+    B[block[1], :] += triang.inp[1] * G
 
 
 end
@@ -53,11 +53,11 @@ function Base.:*(A::SSS, x::AbstractVector)
     b = zeros(size(A, 1))
 
     # multiply diagonal part
-    diagonal_multiply!(b, A.diagonal, x, A.off, A.no_blocks)
+    diagonal_multiply!(b, A.diagonal, x, A.block, A.no_blocks)
     # multiply lower triangular part
-    forward_iterate!(b, A.lower, x, A.off, A.no_blocks)
+    forward_iterate!(b, A.lower, x, A.block, A.no_blocks)
     # multiply upper triangular part
-    backward_iterate!(b, A.upper, x, A.off, A.no_blocks)
+    backward_iterate!(b, A.upper, x, A.block, A.no_blocks)
 
     return b
 
@@ -72,11 +72,11 @@ function Base.:*(A::SSS, X::AbstractMatrix)
     B = zeros(size(A, 1), size(X, 2))
 
     # multiply diagonal part
-    diagonal_multiply!(B, A.diagonal, X, A.off, A.no_blocks)
+    diagonal_multiply!(B, A.diagonal, X, A.block, A.no_blocks)
     # multiply lower triangular part
-    forward_iterate!(B, A.lower, X, A.off, A.no_blocks)
+    forward_iterate!(B, A.lower, X, A.block, A.no_blocks)
     # multiply upper triangular part
-    backward_iterate!(B, A.upper, X, A.off, A.no_blocks)
+    backward_iterate!(B, A.upper, X, A.block, A.no_blocks)
 
     return B
 
@@ -92,11 +92,11 @@ function Base.:*(A::Adjoint{Scalar,SSS{Scalar}}, X::AbstractMatrix) where {Scala
     B = zeros(size(A, 1), size(X, 2))
 
     # multiply diagonal part
-    diagonal_multiply_adjoint!(B, A.parent.diagonal, X, A.parent.off, A.parent.no_blocks)
+    diagonal_multiply_adjoint!(B, A.parent.diagonal, X, A.parent.block, A.parent.no_blocks)
     # multiply lower triangular part
-    forward_iterate!(B, A.parent.upper, X, A.parent.off, A.parent.no_blocks)
+    forward_iterate!(B, A.parent.upper, X, A.parent.block, A.parent.no_blocks)
     # multiply upper triangular part
-    backward_iterate!(B, A.parent.lower, X, A.parent.off, A.parent.no_blocks)
+    backward_iterate!(B, A.parent.lower, X, A.parent.block, A.parent.no_blocks)
 
     return B
 

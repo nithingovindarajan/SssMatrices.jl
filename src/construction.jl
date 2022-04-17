@@ -1,8 +1,8 @@
-function extract_diagonalpart(A, off, no_blocks)
+function extract_diagonalpart(A, block, no_blocks)
 
     D = Matrix[]
     for i = 1:no_blocks
-        push!(D, A[off[i]+1:off[i+1], off[i]+1:off[i+1]])
+        push!(D, A[block[i], block[i]])
     end
 
     return D
@@ -21,8 +21,8 @@ function extract_triangularpart(A, n, off, no_blocks, threshold)
     # add out_(1)
     push!(out, zeros(n[1], 0))
     # initialize Hbar
-    Hbar = zeros(off[end] - off[2], 0)
-    println(" ")
+    Hbar = zeros(size(A, 2) - n[1], 0)
+
     for i = 1:no_blocks-1
 
         Htilde = [Hbar A[off[i+1]+1:end, off[i]+1:off[i+1]]]
@@ -90,20 +90,22 @@ function SSS_generators(A, n; threshold=1E-14)
     # some definitions
     no_blocks = length(n)
     off = [0; cumsum(n)]
+    block = [off[i]+1:off[i+1] for i = 1:no_blocks]
+
 
     # Define
-    D = extract_diagonalpart(A, off, no_blocks)
+    D = extract_diagonalpart(A, block, no_blocks)
     Q, R, P = extract_triangularpart(A, n, off, no_blocks, threshold)
     U, W, V = extract_triangularpart(A', n, off, no_blocks, threshold)
 
-    return (D, Q, R, P, U, W, V, no_blocks, off)
+    return (D, Q, R, P, U, W, V, block, no_blocks)
 
 end
 
 
 
 function SSS{T}(A::AbstractMatrix, n::Vector{<:Integer}; threshold::Float64=1E-14) where {T<:Number}
-    D, Q, R, P, U, W, V, no_blocks, off = SSS_generators(A, n; threshold=threshold)
+    D, Q, R, P, U, W, V, _, _ = SSS_generators(A, n; threshold=threshold)
     return SSS{T}(D, Q, R, P, U, W, V)
 end
 

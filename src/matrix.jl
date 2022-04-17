@@ -1,13 +1,13 @@
-function diagonalfill!(Adense, diagonal, off, no_blocks)
+function diagonalfill!(Adense, diagonal, block, no_blocks)
 
     for i = 1:no_blocks
-        Adense[off[i]+1:off[i+1], off[i]+1:off[i+1]] = diagonal.D[i]
+        Adense[block[i], block[i]] = diagonal.D[i]
     end
 
 end
 
 
-function triangularfill!(Adense, triang, off, no_blocks)
+function triangularfill!(Adense, triang, block, no_blocks)
 
     for j = 1:no_blocks
 
@@ -15,7 +15,7 @@ function triangularfill!(Adense, triang, off, no_blocks)
 
         for i = j+1:no_blocks
 
-            Adense[off[i]+1:off[i+1], off[j]+1:off[j+1]] = triang.out[i] * temp
+            Adense[block[i], block[j]] = triang.out[i] * temp
             temp = triang.trans[i] * temp
 
         end
@@ -30,11 +30,11 @@ function Base.:Matrix(A::SSS)
     Adense = zeros(eltype(A), A.N, A.N)
 
     #fill up diagonal part
-    diagonalfill!(Adense, A.diagonal, A.off, A.no_blocks)
+    diagonalfill!(Adense, A.diagonal, A.block, A.no_blocks)
     # fill up lower triangular part
-    triangularfill!(Adense, A.lower, A.off, A.no_blocks)
+    triangularfill!(Adense, A.lower, A.block, A.no_blocks)
     # fill up upper triangular part
-    triangularfill!(Adense', A.upper, A.off, A.no_blocks)
+    triangularfill!(Adense', A.upper, A.block, A.no_blocks)
 
     return Adense
 end

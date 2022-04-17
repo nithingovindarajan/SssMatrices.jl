@@ -14,18 +14,18 @@ function SSS_CauchyLike(coeffs, n; K=1.0, threshold=1E-14)
     Stilde = sqrt(n) * ifft((Dminone(n))' * Smat, 1)
 
 
-    D, Q, R, P, U, W, V, no_blocks, off = SSS_generators_Cauchy(n; K=K, threshold=threshold)
+    D, Q, R, P, U, W, V, block, no_blocks = SSS_generators_Cauchy(n; K=K, threshold=threshold)
 
 
-    D = [sumofrowandcolumnscalings(D[l], view(Rtilde, off[l]+1:off[l+1], :), view(Stilde, off[l]+1:off[l+1], :)) for l ∈ 1:no_blocks]
+    D = [sumofrowandcolumnscalings(D[l], view(Rtilde, block[l], :), view(Stilde, block[l], :)) for l ∈ 1:no_blocks]
 
-    Q = [hcat(Tuple(Q[l] .* view(Stilde, off[l]+1:off[l+1], i) for i ∈ 1:r)...) for l ∈ 1:no_blocks]
+    Q = [hcat(Tuple(Q[l] .* view(Stilde, block[l], i) for i ∈ 1:r)...) for l ∈ 1:no_blocks]
     R = [BlockDiagonal([R[l] for i ∈ 1:r]) for l ∈ 1:no_blocks]
-    P = [hcat(Tuple(view(Rtilde, off[l]+1:off[l+1], i) .* P[l] for i ∈ 1:r)...) for l ∈ 1:no_blocks]
+    P = [hcat(Tuple(view(Rtilde, block[l], i) .* P[l] for i ∈ 1:r)...) for l ∈ 1:no_blocks]
 
-    U = [hcat(Tuple(U[l] .* view(Rtilde, off[l]+1:off[l+1], i) for i ∈ 1:r)...) for l ∈ 1:no_blocks]
+    U = [hcat(Tuple(U[l] .* view(Rtilde, block[l], i) for i ∈ 1:r)...) for l ∈ 1:no_blocks]
     W = [BlockDiagonal([W[l] for i ∈ 1:r]) for l ∈ 1:no_blocks]
-    V = [hcat(Tuple(view(Stilde, off[l]+1:off[l+1], i) .* V[l] for i ∈ 1:r)...) for l ∈ 1:no_blocks]
+    V = [hcat(Tuple(view(Stilde, block[l], i) .* V[l] for i ∈ 1:r)...) for l ∈ 1:no_blocks]
 
 
 
