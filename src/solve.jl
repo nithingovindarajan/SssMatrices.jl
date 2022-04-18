@@ -1,14 +1,5 @@
 export forwarditerate
 
-SchurComplements = Vector{Matrix}
-
-function diagblock(A, k)
-
-    return [Matrix(I, size(A.upper.out[k], 2), size(A.upper.out[k], 2)) zeros(size(A.upper.out[k], 2), size(A.lower.inp[k], 2)) -A.upper.out[k]'
-        zeros(size(A.lower.inp[k], 2), size(A.upper.out[k], 2)) Matrix(I, size(A.lower.inp[k], 2), size(A.lower.inp[k], 2)) -A.lower.inp[k]'
-        zeros(A.n[k], size(A.upper.out[k], 2)) zeros(A.n[k], size(A.lower.inp[k], 2)) A.diagonal.D[k]]
-
-end
 
 function supdiagblock(A, k)
     return [-A.upper.trans[k-1]' zeros(size(A.upper.out[k-1], 2), size(A.lower.inp[k], 2)) zeros(size(A.upper.out[k-1], 2), A.n[k])
@@ -31,16 +22,8 @@ function Sblock(A, Psi, Phi, k)
 
 end
 
-function compute_Phi_Psi(A, Psi, Phi, k)
 
-    a1, a2 = compute_Phi_Psi2(A.upper.out[k-1], A.lower.inp[k-1], A.diagonal.D[k-1], Psi[k-1], Phi[k-1], A.lower.trans[k], A.lower.out[k], A.upper.trans[k-1]', A.upper.inp[k-1])
-
-    return a1, a2
-
-end
-
-
-function compute_Phi_Psi2(V_i,
+function compute_Phi_Psi(V_i,
     Q_i,
     D_i,
     Psi_i,
@@ -67,15 +50,16 @@ end
 
 function compute_schurcomplements(A)
 
-    Psi = SchurComplements(undef, A.no_blocks)
-    Phi = SchurComplements(undef, A.no_blocks)
+    Psi = Vector{Matrix}(undef, A.no_blocks)
+    Phi = Vector{Matrix}(undef, A.no_blocks)
 
     Psi[1] = zeros(size(A.lower.inp[1], 2), size(A.upper.out[1], 2))
     Phi[1] = zeros(A.n[1], size(A.upper.out[1], 2))
 
     for k = 2:A.no_blocks
 
-        Psi[k], Phi[k] = compute_Phi_Psi(A, Psi, Phi, k)
+        Psi[k], Phi[k] = compute_Phi_Psi(A.upper.out[k-1], A.lower.inp[k-1], A.diagonal.D[k-1], Psi[k-1], Phi[k-1],
+            A.lower.trans[k], A.lower.out[k], A.upper.trans[k-1]', A.upper.inp[k-1])
 
     end
 
@@ -229,8 +213,4 @@ C = [-W_i zeros(r, r) zeros(r, n)
     U_i zeros(n, r) zeros(n, n)]
 
 S = A - B * inv(D) * C
-
-
-# iteration
-Psi_iplus1, Phi_iplus1 = compute_Phi_Psi2(V_i, Q_i, D_i, Psi_i, Phi_i, R_iplus1, P_iplus1, W_i, U_i)
 
