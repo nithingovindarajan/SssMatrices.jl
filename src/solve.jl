@@ -33,14 +33,11 @@ end
 
 function compute_Phi_Psi(A, Psi, Phi, k)
 
-    Temp = Psi[k-1] * A.upper.trans[k-1]' + (-A.lower.inp[k-1]' + Psi[k-1] * A.upper.out[k-1]') * inv(A.diagonal.D[k-1] + Phi[k-1] * A.upper.out[k-1]') * (Phi[k-1] * A.upper.trans[k-1]' + A.upper.inp[k-1])
-
     a1, a2 = compute_Phi_Psi2(A.upper.out[k-1], A.lower.inp[k-1], A.diagonal.D[k-1], Psi[k-1], Phi[k-1], A.lower.trans[k], A.lower.out[k], A.upper.trans[k-1]', A.upper.inp[k-1])
 
     return a1, a2
 
 end
-
 
 
 function compute_Phi_Psi2(V_i,
@@ -70,40 +67,38 @@ end
 
 function compute_schurcomplements(A)
 
-    S = SchurComplements(undef, A.no_blocks)
     Psi = SchurComplements(undef, A.no_blocks)
     Phi = SchurComplements(undef, A.no_blocks)
 
-    S[1] = diagblock(A, 1)
     Psi[1] = zeros(size(A.lower.inp[1], 2), size(A.upper.out[1], 2))
     Phi[1] = zeros(A.n[1], size(A.upper.out[1], 2))
 
     for k = 2:A.no_blocks
 
         Psi[k], Phi[k] = compute_Phi_Psi(A, Psi, Phi, k)
-        S[k] = Sblock(A, Psi, Phi, k)
-
 
     end
 
-    return S
+    return Psi, Phi
 
 end
 
-function forwardsolve(A, k, S, c, q, r, s)
+function forwardsolve(A, k, Psi, Phi, c, q, r, s)
 
     c_lift = [zeros(A.upper_hankel_ranks[k])
         zeros(A.lower_hankel_ranks[k])
         c[A.block[k]]]
 
-    x_lift = c_lift - subdiagblock(A, k) * (S[k-1] \ [q[A.rblock_upper[k-1]]
+
+
+    x_lift = c_lift - subdiagblock(A, k) * (Sblock(A, Psi, Phi, k - 1) \ [q[A.rblock_upper[k-1]]
         r[A.rblock_lower[k-1]]
         s[A.block[k-1]]])
 
     return x_lift[1:A.upper_hankel_ranks[k]], x_lift[(A.upper_hankel_ranks[k]+1):A.upper_hankel_ranks[k]+A.lower_hankel_ranks[k]], x_lift[(A.upper_hankel_ranks[k]+A.lower_hankel_ranks[k]+1):end]
 end
 
-function forwarditerate(A, S, c)
+function forwarditerate(A, Psi, Phi, c)
 
 
     q = zeros(ComplexF64, A.tot_ranks_upper)
@@ -114,7 +109,7 @@ function forwarditerate(A, S, c)
 
     for k = 2:A.no_blocks
 
-        q[A.rblock_upper[k]], r[A.rblock_lower[k]], s[A.block[k]] = forwardsolve(A, k, S, c, q, r, s)
+        q[A.rblock_upper[k]], r[A.rblock_lower[k]], s[A.block[k]] = forwardsolve(A, k, Psi, Phi, c, q, r, s)
 
     end
 
@@ -125,12 +120,12 @@ end
 
 
 
-function backwarditerate!(q, r, s, A, S)
+function backwarditerate!(q, r, s, A, Psi, Phi)
 
 
 
 
-    x_lift = S[A.no_blocks] \ [q[A.rblock_upper[A.no_blocks]]
+    x_lift = Sblock(A, Psi, Phi, A.no_blocks) \ [q[A.rblock_upper[A.no_blocks]]
         r[A.rblock_lower[A.no_blocks]]
         s[A.block[A.no_blocks]]]
 
@@ -141,7 +136,7 @@ function backwarditerate!(q, r, s, A, S)
     for k = A.no_blocks:-1:2
 
 
-        x_lift = S[k-1] \ ([q[A.rblock_upper[k-1]]
+        x_lift = Sblock(A, Psi, Phi, k - 1) \ ([q[A.rblock_upper[k-1]]
             r[A.rblock_lower[k-1]]
             s[A.block[k-1]]] - supdiagblock(A, k) * [q[A.rblock_upper[k]]
             r[A.rblock_lower[k]]
@@ -166,9 +161,9 @@ function Base.:\(A::SSS, c::Vector)
     else
 
         # note: D^-1 is computed twice. It might be good to save the QR / LU of Di in memory?
-        S = compute_schurcomplements(A)
-        q, r, s = forwarditerate(A, S, c)
-        backwarditerate!(q, r, s, A, S)
+        Psi, Phi = compute_schurcomplements(A)
+        q, r, s = forwarditerate(A, Psi, Phi, c)
+        backwarditerate!(q, r, s, A, Psi, Phi)
 
         return s
 
