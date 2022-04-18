@@ -23,6 +23,43 @@ function subdiagblock(A, k)
 
 end
 
+function Sblock(A, Psi, Phi, k)
+
+    return [Matrix(I, size(A.upper.out[k], 2), size(A.upper.out[k], 2)) zeros(size(A.upper.out[k], 2), size(A.lower.inp[k], 2)) -A.upper.out[k]'
+        Psi[k] Matrix(I, size(A.lower.inp[k], 2), size(A.lower.inp[k], 2)) -A.lower.inp[k]'
+        Phi[k] zeros(A.n[k], size(A.lower.inp[k], 2)) A.diagonal.D[k]]
+
+end
+
+function compute_Phi_Psi(A, Psi, Phi, k)
+
+    Temp = Psi[k-1] * A.upper.trans[k-1]' + (-A.lower.inp[k-1]' + Psi[k-1] * A.upper.out[k-1]') * inv(A.diagonal.D[k-1] + Phi[k-1] * A.upper.out[k-1]') * (Phi[k-1] * A.upper.trans[k-1]' + A.upper.inp[k-1])
+
+    a1, a2 = compute_Phi_Psi2(A.upper.out[k-1], A.lower.inp[k-1], A.diagonal.D[k-1], Psi[k-1], Phi[k-1], A.lower.trans[k], A.lower.out[k], A.upper.trans[k-1]', A.upper.inp[k-1])
+
+    return a1, a2
+
+end
+
+
+
+function compute_Phi_Psi2(V_i,
+    Q_i,
+    D_i,
+    Psi_i,
+    Phi_i,
+    R_iplus1,
+    P_iplus1,
+    W_i,
+    U_i)
+
+
+    Temp = (Psi_i * W_i - (-Q_i' + Psi_i * V_i') * inv(D_i + Phi_i * V_i') * (Phi_i * W_i + U_i))
+
+    return R_iplus1 * Temp, -P_iplus1 * Temp
+
+end
+
 
 function schurcomplement(A11, A12, A21, A22)
 
@@ -34,12 +71,18 @@ end
 function compute_schurcomplements(A)
 
     S = SchurComplements(undef, A.no_blocks)
+    Psi = SchurComplements(undef, A.no_blocks)
+    Phi = SchurComplements(undef, A.no_blocks)
 
     S[1] = diagblock(A, 1)
+    Psi[1] = zeros(size(A.lower.inp[1], 2), size(A.upper.out[1], 2))
+    Phi[1] = zeros(A.n[1], size(A.upper.out[1], 2))
 
     for k = 2:A.no_blocks
 
-        S[k] = schurcomplement(S[k-1], supdiagblock(A, k), subdiagblock(A, k), diagblock(A, k))
+        Psi[k], Phi[k] = compute_Phi_Psi(A, Psi, Phi, k)
+        S[k] = Sblock(A, Psi, Phi, k)
+
 
     end
 
@@ -153,9 +196,46 @@ end
 # end
 
 
+n = 5
+r = 3
+V_i = rand(n, r)
+Q_i = rand(n, r)
+D_i = rand(n, n)
+Psi_i = rand(n, r)
+Phi_i = rand(n, r)
+R_iplus1 = rand(r, r)
+P_iplus1 = rand(n, r)
+W_i = rand(r, r)
+U_i = rand(n, r)
+
+
+V_iplus1 = rand(n, r)
+Q_iplus1 = rand(n, r)
+D_iplus1 = rand(n, n)
+
+
+Psi_i = rand(r, r)
+Phi_i = rand(n, r)
 
 
 
 
+A = [Matrix(I, r, r) zeros(r, r) -V_iplus1'
+    zeros(r, r) Matrix(I, r, r) -Q_iplus1'
+    zeros(n, r) zeros(n, r) D_iplus1]
+B = [zeros(r, r) zeros(r, r) zeros(r, n)
+    zeros(r, r) -R_iplus1 zeros(r, n)
+    zeros(n, r) P_iplus1 zeros(n, n)]
+D = [Matrix(I, r, r) zeros(r, r) -V_i'
+    Psi_i Matrix(I, r, r) -Q_i'
+    Phi_i zeros(n, r) D_i]
+C = [-W_i zeros(r, r) zeros(r, n)
+    zeros(r, r) zeros(r, r) zeros(r, n)
+    U_i zeros(n, r) zeros(n, n)]
 
+S = A - B * inv(D) * C
+
+
+# iteration
+Psi_iplus1, Phi_iplus1 = compute_Phi_Psi2(V_i, Q_i, D_i, Psi_i, Phi_i, R_iplus1, P_iplus1, W_i, U_i)
 
