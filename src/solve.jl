@@ -34,7 +34,7 @@ function compute_Phi_Psi(V_i,
     U_i)
 
 
-    Temp = (Psi_i * W_i - (-Q_i' + Psi_i * V_i') * inv(D_i + Phi_i * V_i') * (Phi_i * W_i + U_i))
+    Temp = (Psi_i * W_i - (-Q_i' + Psi_i * V_i') * ((D_i + Phi_i * V_i') \ (Phi_i * W_i + U_i)))
 
     return R_iplus1 * Temp, -P_iplus1 * Temp
 
