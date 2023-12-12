@@ -26,7 +26,17 @@ Chandrasekaran, S., Gu, M., Sun, X., Xia, J., & Zhu, J. (2008). A superfast algo
 
 
 
-
+<!-- 
+GOALS:
+- QR-based solver
+- add ULV
+- Transposing SSS matrices
+- LU decomposition
+- QR decomposition
+- SSS matrix-matrix multiply
+- SSS inverse
+- extnd solvers to minimum norm and overdetermined systems
+ -->
 
 
 
