@@ -11,17 +11,11 @@ using SssMatrices
 
 K(x,y) = (x-y) != 0 ? 1/(x-y) : 1.
 A = [ K(x,y) for x=-1:0.001:1, y=-1:0.001:1]
-hssA = hss(A)
+A_SSS = SSS(A)
+
+
+
 ```
-
-
-## Running tests
-
-To run the tests, follow the following steps:
-1. Clone this repository to your local workstation
-2. Open Julia REPL inside root directory of this folder.
-3. Type "]" to enter the package manager.
-4. Type "test" and press enter 
 
 ## Relevant literature
 
