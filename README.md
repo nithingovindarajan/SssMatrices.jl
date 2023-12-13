@@ -1,13 +1,18 @@
-# SSSmatrices
+# SssMatrices.jl
 
 `SssMatrices` is Julia package for Sequentially Semi-Separable (SSS) matrices. SSS matrices were originally introduced in [1] within the context systems theory. This package implements routines to convert a dense matrix into (minimal) SSS representations and to solve linear systems Ax = b in SSS form. 
 
-## How to install this package
+## Getting started
 
-Follow the standard procedure for any Julia package, e.g.
 
-1. Type "]" to enter the package manager.
-2. Type "add https://github.com/nithingovindarajan/SSSmatrices" and press enter 
+```Julia
+using LinearAlgebra
+using SssMatrices
+
+K(x,y) = (x-y) != 0 ? 1/(x-y) : 1.
+A = [ K(x,y) for x=-1:0.001:1, y=-1:0.001:1]
+hssA = hss(A)
+```
 
 
 ## Running tests
