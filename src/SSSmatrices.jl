@@ -1,4 +1,4 @@
-module SSSmatrices
+module SssMatrices
 
 # dependent packages
 using LinearAlgebra

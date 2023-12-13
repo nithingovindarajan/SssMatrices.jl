@@ -3,7 +3,7 @@ using Random
 using LinearAlgebra
 
 
-using SSSmatrices
+using SssMatrices
 
 
 include("casestudies.jl")
