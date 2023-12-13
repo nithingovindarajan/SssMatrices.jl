@@ -1,6 +1,6 @@
 # SssMatrices.jl
 
-`SssMatrices` is Julia package for Sequentially Semi-Separable (SSS) matrices. SSS matrices were originally introduced in [1] within the context systems theory. This package implements routines to convert a dense matrix into (minimal) SSS representations and to solve linear systems Ax = b in SSS form. 
+`SssMatrices` is Julia package for Sequentially Semi-Separable (SSS) matrices. SSS matrices were originally introduced in [1] within the context systems theory. This package implements routines to convert a dense matrix into (minimal) SSS representations and to solve linear systems (i.e. Ax = b) in SSS form. 
 
 ## Getting started
 
